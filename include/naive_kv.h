@@ -17,7 +17,7 @@ class naive_kv {
      * This function writes a snapshot of the current
      * key-value table into the disk.
      */
-    int take_snapshot();
+    int take_snapshot12312();
 
     /**
      * This function recover the key-value table using
