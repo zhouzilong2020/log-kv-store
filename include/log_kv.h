@@ -10,12 +10,13 @@
 #include <string>
 #include <unordered_map>
 
-class log_kv {
+class LogKV
+{
    private:
     // this map stores the current key-value table
-    std::unordered_map<std::string, std::string> kv_table;
+    std::unordered_map<std::string, std::string> kvTable;
     // data structure that maintains the log
-    my_log kv_log;
+    Log kvLog;
 
    public:
     /**
@@ -40,7 +41,7 @@ class log_kv {
      * Client can use <code>delete_k</code> to
      * delete the key-value pair from the table.
      */
-    int delete_k(std::string key);
+    int deleteK(std::string key);
 };
 
 #endif

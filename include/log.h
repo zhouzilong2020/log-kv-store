@@ -9,29 +9,17 @@
  */
 #ifndef __LOG_H__
 #define __LOG_H__
-struct entry {
+
+struct Entry
+{
     int version;
-    long key_size;
-    long val_size;
+    long keySize;
+    long valSize;
     void *payload;
 };
 
-class my_log {
-   private:
-    void *log_head;      // points to the start of first log segment
-    void *log_seg_head;  // points to the first writable byte of the current log
-    long size;           // record the number of entries currently in the log
-    long byte_size;      // log size in bytes
-    int write_interval;  // specifies the time interval that a disk write will
-                         // be triggered
-
-    int expend();      // expend the log
-    int compact();     // compact the log, removing unnecessary entries
-    int write_disk();  // write the current log into the disk
-    int
-    timer_trigger();  // this function will trigger the disk write periodically,
-                      // even if the log capacity is not reached
-
+class Log
+{
    public:
     /**
      * This function append the key-value pair,
@@ -47,6 +35,35 @@ class my_log {
      * the in-memory log, after a failure.
      */
     int recover();
+
+   private:
+    void *logHead;      ///< points to the start of first log segment
+    void *logSegHead;   // points to the first writable byte of the current log
+    long size;          // record the number of entries currently in the log
+    long byteSize;      // log size in bytes
+    int writeInterval;  // specifies the time interval that a disk write will
+                        // be triggered
+
+    /*
+     * expend expends the log.
+     */
+    int expend();
+
+    /*
+     * compact compacts the log, removing unnecessary entries.
+     */
+    int compact();
+
+    /*
+     * write2Disk writes the current log to the disk.
+     */
+    int write2Disk();
+
+    /**
+     * timerTrigger triggers the disk write periodically, even if the log
+     * capacity is not reached
+     */
+    int timerTrigger();
 };
 
 #endif
