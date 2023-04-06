@@ -3,9 +3,11 @@
  * class.
  */
 
+#ifndef __LOG_KV_H__
+#define __LOG_KV_H__
 #include <log.h>
-#include <string.h>
 
+#include <string>
 #include <unordered_map>
 
 class log_kv {
@@ -40,3 +42,5 @@ class log_kv {
      */
     int delete_k(std::string key);
 };
+
+#endif

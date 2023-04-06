@@ -4,5 +4,5 @@
  * and disk snapshot.
  */
 
-#include <naive.h>
+#include <naive_kv.h>
 #include <util.h>

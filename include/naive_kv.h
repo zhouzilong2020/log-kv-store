@@ -3,8 +3,9 @@
  * class.
  */
 
-#include <string.h>
-
+#ifndef __NAIVE_KV_H__
+#define __NAIVE_KV_H__
+#include <string>
 #include <unordered_map>
 
 class naive_kv {
@@ -17,7 +18,7 @@ class naive_kv {
      * This function writes a snapshot of the current
      * key-value table into the disk.
      */
-    int take_snapshot();
+    int take_snapshot12312();
 
     /**
      * This function recover the key-value table using
@@ -43,3 +44,4 @@ class naive_kv {
      */
     int delete_k(std::string key);
 };
+#endif
