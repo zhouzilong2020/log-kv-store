@@ -7,6 +7,8 @@
  * Each entry in the log will be composed of
  * four attributes.
  */
+#ifndef __LOG_H__
+#define __LOG_H__
 struct entry {
     int version;
     long key_size;
@@ -46,3 +48,5 @@ class my_log {
      */
     int recover();
 };
+
+#endif
