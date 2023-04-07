@@ -12,31 +12,31 @@ class NaiveKV
 {
    public:
     /**
-     * takeSnapshot take a snapshot of the current
-     * key-value table into the disk.
-     */
-    int takeSnapshot();
-
-    /**
-     * recover recover the key-value table using
-     * the disk snapshot, after a failure.
-     */
-    int recover();
-
-    /**
      * put put the key-value pair into the hash table
      */
-    int put(std::string key, std::string value, int version);
+    int put(std::string key, std::string val);
 
     /**
      * get return the value of the given key
      */
-    int get(std::string key);
+    std::string get(std::string key);
 
     /**
      * deleteK delete the given key-value pair
      */
     int deleteK(std::string key);
+
+    /**
+     * TODO: takeSnapshot take a snapshot of the current
+     * key-value table into the disk.
+     */
+    int takeSnapshot();
+
+    /**
+     * TODO: recover recover the key-value table using
+     * the disk snapshot, after a failure.
+     */
+    int recover();
 
    private:
     // this map stores the current in memory key-value table

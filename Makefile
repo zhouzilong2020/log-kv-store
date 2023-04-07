@@ -1,5 +1,5 @@
 CXX = g++
-CXXFLAGS = -Wall -Wextra -pedantic -O2 -std=c++11
+CXXFLAGS = -g -Wall -Wextra -pedantic -O2 -std=c++11
 LDFLAGS = -Wl
 
 INCLUDE_DIR = include

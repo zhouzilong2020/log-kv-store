@@ -7,10 +7,48 @@
 #include <log.h>
 #include <util.h>
 
-/**
- * The log data structure uses a singly linked
- * subarrays as the underlying data structure.
- * The subarrays are of fixed length (2MB), which
- * allocated on the heap when the current space is
- * not enough.
- */
+#include <string>
+
+Log::Log()
+{
+    // initialize the meta data
+    entryCnt = 0;
+    byteSize = 0;
+    lastWrite = 0;
+    fileCnt = 0;
+
+    // initialize the first memory chunk
+    head = std::malloc(ChunkSize);
+    logList.push_back(head);
+}
+
+void *Log::append(int version, const char *key, const char *val)
+{
+    int keySize = strlen(key) + 1;  // including the null char
+    int valSize = strlen(val) + 1;
+    int entrySize = 6 + keySize + valSize;
+
+    // check size
+    if (entrySize > currentLogSize)
+    {
+        expend();
+    }
+
+    Entry *newEntry = (Entry *)head;
+    newEntry->version = version;
+    newEntry->keySize = keySize;
+    newEntry->valSize = valSize;
+    // FIXME: is memory alignment a problem?
+    strlcpy((char *)&newEntry->payload, key, newEntry->keySize);
+    strlcpy((char *)&newEntry->payload + keySize, val, newEntry->valSize);
+    head = (char *)head + entrySize;
+
+    entryCnt++;
+    byteSize = byteSize + entrySize;
+
+    return newEntry;
+}
+
+void Log::recover()
+{
+}
