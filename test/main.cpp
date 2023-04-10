@@ -25,6 +25,20 @@ std::string randomString(int strLen)
     return str;
 }
 
+bool cmpTables(LogKV &logKV, std::unordered_map<std::string, std::string> &map)
+{
+    assert(logKV.size() == map.size());
+    for (auto kv : map)
+    {
+        if (kv.second != logKV.get(kv.first))
+        {
+            printf("wrong val\n");
+            return false;
+        }
+    }
+    return true;
+}
+
 void testBasicGetPut()
 {
     printf("testing testBasicGetPut\n");
@@ -42,21 +56,21 @@ void testBasicGetPut()
         logKV.put(key, val);
     }
 
-    for (auto kv : map)
+    if (!cmpTables(logKV, map))
     {
-        if (kv.second != logKV.get(kv.first))
-        {
-            printf("wrong val\n");
-            exit(1);
-        }
+        exit(1);
     }
+
     printf("Succeed!\n");
 }
 
 void testBasicDelete()
 {
+    printf("testing testBasicDelete\n");
+
     LogKV logKV;
     std::unordered_map<std::string, std::string> map;
+    std::vector<std::string> allKey;
 
     for (int i = 0; i < 10; i++)
     {
@@ -65,12 +79,46 @@ void testBasicDelete()
 
         map[key] = val;
         logKV.put(key, val);
+        allKey.push_back(key);
+        printf("put %s %s\n", key.c_str(), val.c_str());
     }
 
-    for (auto kv : map)
+    std::vector<std::string>::iterator it;
+
+    // remove first
+    it = allKey.begin();
+    printf("delete %s %s\n", (*it).c_str(), (map[*it]).c_str());
+    map.erase(*it);
+    logKV.deleteK(*it);
+    allKey.erase(it);
+    if (!cmpTables(logKV, map)) exit(1);
+
+    // remove last
+    it = allKey.end() - 1;
+    printf("delete %s %s\n", (*it).c_str(), (map[*it]).c_str());
+    map.erase(*it);
+    logKV.deleteK(*it);
+    allKey.erase(it);
+    if (!cmpTables(logKV, map)) exit(1);
+
+    // remove mid
+    it = allKey.begin() + 5;
+    printf("delete %s %s\n", (*it).c_str(), (map[*it]).c_str());
+    map.erase(*it);
+    logKV.deleteK(*it);
+    allKey.erase(it);
+    if (!cmpTables(logKV, map)) exit(1);
+
+    // remove all
+    for (it = allKey.begin(); it < allKey.end(); it++)
     {
-        assert(kv.second == logKV.get(kv.first));
+        printf("delete %s %s\n", (*it).c_str(), (map[*it]).c_str());
+        map.erase(*it);
+        logKV.deleteK(*it);
+        if (!cmpTables(logKV, map)) exit(1);
     }
+
+    printf("Succeed!\n");
 }
 
 int main(int argc, char *argv[])
@@ -78,6 +126,7 @@ int main(int argc, char *argv[])
     try
     {
         testBasicGetPut();
+        testBasicDelete();
     }
     catch (const std::exception &ex)
     {
