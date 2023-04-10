@@ -6,6 +6,7 @@
 #include <log.h>
 #include <log_kv.h>
 #include <naive_kv.h>
+#include <utility.h>
 
 #include <iostream>
 #include <string>
@@ -125,8 +126,10 @@ int main(int argc, char *argv[])
 {
     try
     {
+        setClock();
         testBasicGetPut();
         testBasicDelete();
+        printf("Duration %d\n", getOpTime());
     }
     catch (const std::exception &ex)
     {
