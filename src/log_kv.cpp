@@ -7,7 +7,7 @@
 
 #include <log.h>
 #include <log_kv.h>
-#include <util.h>
+#include <utility.h>
 
 LogKV::LogKV()
 {
