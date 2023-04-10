@@ -21,6 +21,7 @@ int LogKV::put(std::string key, std::string val)
     if (it == kvTable.end())
     {
         logPtr = log->append(0, key.c_str(), val.c_str());
+        tableSize++;
     }
     else
     {
@@ -56,5 +57,11 @@ void LogKV::deleteK(std::string key)
 
     log->append(-1, key.c_str(), NULL);
     kvTable.erase(it);
+    tableSize--;
     return;
+}
+
+size_t LogKV::size()
+{
+    return tableSize;
 }

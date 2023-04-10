@@ -39,11 +39,20 @@ class LogKV
      */
     void deleteK(std::string key);
 
+    /**
+     * size returns the current size of the kv
+     * store, which equals to the number of keys
+     * currently in the table
+     */
+    size_t size();
+
    private:
     // this map stores the current key-value table
     std::unordered_map<std::string, void*> kvTable;
     // data structure that maintains the log
     Log* log;
+
+    size_t tableSize;
 };
 
 #endif
