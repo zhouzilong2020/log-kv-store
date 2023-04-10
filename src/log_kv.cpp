@@ -12,6 +12,7 @@
 LogKV::LogKV()
 {
     log = new Log();
+    tableSize = 0;
 }
 
 int LogKV::put(std::string key, std::string val)
