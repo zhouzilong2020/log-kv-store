@@ -18,7 +18,7 @@ std::string randomString(int strLen)
 
     for (int i = 0; i < strLen; i++)
     {
-        char charASCII = 'a' + arc4random() % 24;
+        char charASCII = 'a' + arc4random() % 26;
         str.append(&charASCII);
     }
 
