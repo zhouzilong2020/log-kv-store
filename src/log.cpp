@@ -24,9 +24,11 @@ Log::Log()
 
 void *Log::append(int version, std::string &key, const std::string *val)
 {
+    const static int offset = offsetof(Entry, payload);
+
     int keySize = key.size() + 1;  // including the null char
     int valSize = val == NULL ? 0 : val->size() + 1;
-    int entrySize = 6 + keySize + valSize;
+    int entrySize = offset + keySize + valSize;
 
     // check size
     if (entrySize + currentLogSize > ChunkSize)
