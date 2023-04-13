@@ -1,3 +1,4 @@
 .vscode/
 build
 log_kv
+.DS_Store
