@@ -43,8 +43,9 @@ class Log
      * into the log.
      *
      * Note that a -1 version number stands for a deletion.
+     * val is nullable so we use pointer here.
      */
-    void *append(int version, const char *key, const char *val);
+    void *append(int version, std::string &key, const std::string *val);
 
     /**
      * This function load the log from the disk to recover

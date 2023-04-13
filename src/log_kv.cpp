@@ -15,26 +15,26 @@ LogKV::LogKV()
     tableSize = 0;
 }
 
-int LogKV::put(std::string key, std::string val)
+int LogKV::put(std::string &key, const std::string *val)
 {
     auto it = kvTable.find(key);
     void *logPtr;
     if (it == kvTable.end())
     {
-        logPtr = log->append(0, key.c_str(), val.c_str());
+        logPtr = log->append(0, key, val);
         tableSize++;
     }
     else
     {
         Entry *entry = (Entry *)it->second;
-        logPtr = log->append(entry->version + 1, key.c_str(), val.c_str());
+        logPtr = log->append(entry->version + 1, key, val);
     }
 
     kvTable[key] = logPtr;
     return 0;
 }
 
-std::unique_ptr<std::string> LogKV::get(std::string key)
+std::unique_ptr<std::string> LogKV::get(const std::string &key)
 {
     auto it = kvTable.find(key);
     if (it == kvTable.end())
@@ -50,7 +50,7 @@ std::unique_ptr<std::string> LogKV::get(std::string key)
     return ptr;
 }
 
-void LogKV::deleteK(std::string key)
+void LogKV::deleteK(std::string &key)
 {
     auto it = kvTable.find(key);
     if (it == kvTable.end())
@@ -58,7 +58,7 @@ void LogKV::deleteK(std::string key)
         return;
     }
 
-    log->append(-1, key.c_str(), NULL);
+    log->append(-1, key, NULL);
     kvTable.erase(it);
     tableSize--;
     return;

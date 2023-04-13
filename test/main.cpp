@@ -56,7 +56,7 @@ void testBasicGetPut()
         std::string key = randomString(25);
         std::string val = randomString(50);
         map[key] = val;
-        logKV.put(key, val);
+        logKV.put(key, &val);
     }
 
     assert(cmpTables(logKV, map));
@@ -78,16 +78,14 @@ void testBasicDelete()
         std::string val = randomString(50);
 
         map[key] = val;
-        logKV.put(key, val);
+        logKV.put(key, &val);
         allKey.push_back(key);
-        // printf("put %s %s\n", key.c_str(), val.c_str());
     }
 
     std::vector<std::string>::iterator it;
 
     // remove first
     it = allKey.begin();
-    // printf("delete %s %s\n", (*it).c_str(), (map[*it]).c_str());
     map.erase(*it);
     logKV.deleteK(*it);
     allKey.erase(it);
@@ -95,7 +93,6 @@ void testBasicDelete()
 
     // remove last
     it = allKey.end() - 1;
-    // printf("delete %s %s\n", (*it).c_str(), (map[*it]).c_str());
     map.erase(*it);
     logKV.deleteK(*it);
     allKey.erase(it);
@@ -103,7 +100,6 @@ void testBasicDelete()
 
     // remove mid
     it = allKey.begin() + 5;
-    // printf("delete %s %s\n", (*it).c_str(), (map[*it]).c_str());
     map.erase(*it);
     logKV.deleteK(*it);
     allKey.erase(it);
@@ -112,7 +108,6 @@ void testBasicDelete()
     // remove all
     for (it = allKey.begin(); it < allKey.end(); it++)
     {
-        // printf("delete %s %s\n", (*it).c_str(), (map[*it]).c_str());
         map.erase(*it);
         logKV.deleteK(*it);
         assert(cmpTables(logKV, map));
@@ -136,7 +131,7 @@ void testAdvanced()
         std::string val = randomString(50);
         keys.push_back(key);
         map[key] = val;
-        logKV.put(key, val);
+        logKV.put(key, &val);
 
         // 10% chance to delete
         if (arc4random() % 100 < 10)
@@ -154,13 +149,12 @@ void testAdvanced()
             int idx = arc4random() % keys.size();
             auto key = keys[idx];
             std::string newVal = randomString(50);
-            logKV.put(key, newVal);
+            logKV.put(key, &newVal);
             map[key] = newVal;
         }
     }
 
     assert(cmpTables(logKV, map));
-
     printf("Succeed!\n");
 }
 
@@ -177,7 +171,7 @@ void testBigKV()
         std::string key = randomString(200);
         std::string val = randomString(5000);
         map[key] = val;
-        logKV.put(key, val);
+        logKV.put(key, &val);
     }
 
     assert(cmpTables(logKV, map));

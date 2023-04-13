@@ -22,10 +22,10 @@ Log::Log()
     logList.push_back(head);
 }
 
-void *Log::append(int version, const char *key, const char *val)
+void *Log::append(int version, std::string &key, const std::string *val)
 {
-    int keySize = strlen(key) + 1;  // including the null char
-    int valSize = val == NULL ? 0 : strlen(val) + 1;
+    int keySize = key.size() + 1;  // including the null char
+    int valSize = val == NULL ? 0 : val->size() + 1;
     int entrySize = 6 + keySize + valSize;
 
     // check size
@@ -39,9 +39,10 @@ void *Log::append(int version, const char *key, const char *val)
     newEntry->keySize = keySize;
     newEntry->valSize = valSize;
     // FIXME: is memory alignment a problem?
-    strlcpy((char *)&newEntry->payload, key, newEntry->keySize);
+    strlcpy((char *)&newEntry->payload, key.c_str(), newEntry->keySize);
     if (val)
-        strlcpy((char *)&newEntry->payload + keySize, val, newEntry->valSize);
+        strlcpy((char *)&newEntry->payload + keySize, val->c_str(),
+                newEntry->valSize);
     head = (char *)head + entrySize;
 
     entryCnt++;
