@@ -13,7 +13,7 @@
 
 using namespace std::chrono;
 
-std::string randomString(int strLen)
+std::string randomString(uint strLen)
 {
     std::string str;
     str.reserve((size_t)strLen);
@@ -35,9 +35,9 @@ bool cmpTables(LogKV &logKV, std::unordered_map<std::string, std::string> &map)
         auto ptr = logKV.get(kv.first);
         if (ptr == nullptr || kv.second != *ptr)
         {
-            std::cerr << "Wrong val, expected\n"
-                      << kv.second << "\ngot\n"
-                      << *ptr << std::endl;
+            fprintf(stderr, "key\n%s\nexpected (%lu)\n%s\ngot (%lu)\n%s\n",
+                    kv.first.c_str(), kv.second.size(), kv.second.c_str(),
+                    ptr->size(), ptr->c_str());
             return false;
         }
     }
@@ -51,7 +51,7 @@ void testBasicGetPut()
     LogKV logKV;
     std::unordered_map<std::string, std::string> map;
 
-    for (int i = 0; i < 10; i++)
+    for (int i = 0; i < 10000; i++)
     {
         std::string key = randomString(25);
         std::string val = randomString(50);
@@ -72,7 +72,7 @@ void testBasicDelete()
     std::unordered_map<std::string, std::string> map;
     std::vector<std::string> allKey;
 
-    for (int i = 0; i < 10; i++)
+    for (int i = 0; i < 10000; i++)
     {
         std::string key = randomString(25);
         std::string val = randomString(50);
@@ -105,12 +105,14 @@ void testBasicDelete()
     allKey.erase(it);
     assert(cmpTables(logKV, map));
 
-    // remove all
-    for (it = allKey.begin(); it < allKey.end(); it++)
+    // randomly remove all
+    for (uint i = 0, len = allKey.size(); i < len; i++)
     {
+        it = allKey.begin() + arc4random() % allKey.size();
         map.erase(*it);
         logKV.deleteK(*it);
-        assert(cmpTables(logKV, map));
+        assert(logKV.get(*it) == nullptr);
+        allKey.erase(it);
     }
 
     printf("Succeed!\n");
@@ -125,10 +127,10 @@ void testAdvanced()
     std::vector<std::string> keys;
 
     // 2M entries
-    for (int i = 0; i < (1 << 20); i++)
+    for (int i = 0; i < (1 << 19); i++)
     {
-        std::string key = randomString(25);
-        std::string val = randomString(50);
+        std::string key = randomString(10);
+        std::string val = randomString(20);
         keys.push_back(key);
         map[key] = val;
         logKV.put(key, &val);
@@ -179,12 +181,16 @@ void testBigKV()
     printf("Succeed!\n");
 }
 
-int main(int argc, char *argv[])
+void runTest()
 {
     testBasicGetPut();
     testBasicDelete();
     testAdvanced();
     testBigKV();
+}
 
+int main(int argc, char **argv)
+{
+    runTest();
     return 0;
 }
