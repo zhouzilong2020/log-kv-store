@@ -74,13 +74,15 @@ class Log
      */
     void expend()
     {
-        // expend the log space by default chunck
+        printf("expend the log space\n");
+        // expend the log space by default chunk
         void *new_head = std::malloc(ChunkSize);
         logList.push_back(new_head);
         head = new_head;
+        currentLogSize = 0;
 
         // write back happens whenever a segment is filled
-        write2Disk();
+        persist();
     }
 
     /*

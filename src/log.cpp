@@ -16,10 +16,10 @@ Log::Log()
     byteSize = 0;
     lastWrite = 0;
     fileCnt = 0;
+    currentLogSize = 0;
 
     // initialize the first memory chunk
-    head = std::malloc(ChunkSize);
-    logList.push_back(head);
+    expend();
 }
 
 void *Log::append(int version, std::string &key, const std::string *val)
@@ -29,10 +29,11 @@ void *Log::append(int version, std::string &key, const std::string *val)
     int entrySize = 6 + keySize + valSize;
 
     // check size
-    if (entrySize > currentLogSize)
+    if (entrySize + currentLogSize > ChunkSize)
     {
         expend();
     }
+    currentLogSize += entrySize;
 
     Entry *newEntry = (Entry *)head;
     newEntry->version = version;
@@ -44,9 +45,6 @@ void *Log::append(int version, std::string &key, const std::string *val)
         strlcpy((char *)&newEntry->payload + keySize, val->c_str(),
                 newEntry->valSize);
     head = (char *)head + entrySize;
-
-    entryCnt++;
-    byteSize = byteSize + entrySize;
 
     return newEntry;
 }
