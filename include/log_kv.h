@@ -31,7 +31,7 @@ class LogKV
      * Client can use <code>get</code> to get
      * the current value of the given key.
      */
-    std::string get(std::string key);
+    std::unique_ptr<std::string> get(std::string key);
 
     /**
      * Client can use <code>delete_k</code> to

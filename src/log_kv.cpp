@@ -34,18 +34,20 @@ int LogKV::put(std::string key, std::string val)
     return 0;
 }
 
-std::string LogKV::get(std::string key)
+std::unique_ptr<std::string> LogKV::get(std::string key)
 {
     auto it = kvTable.find(key);
     if (it == kvTable.end())
     {
-        return std::string();
+        return nullptr;
     }
 
     Entry *entry = (Entry *)it->second;
-    std::string res((char *)&entry->payload + entry->keySize);
+    using UniqueStrPtr = std::unique_ptr<std::string>;
+    UniqueStrPtr ptr =
+        UniqueStrPtr(new std::string((char *)&entry->payload + entry->keySize));
 
-    return res;
+    return ptr;
 }
 
 void LogKV::deleteK(std::string key)
