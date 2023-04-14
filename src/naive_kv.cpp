@@ -5,7 +5,7 @@
  */
 
 #include <naive_kv.h>
-#include <utility.h>
+#include <util.h>
 
 int NaiveKV::put(const std::string key, const std::string val)
 {

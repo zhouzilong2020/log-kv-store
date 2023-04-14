@@ -9,7 +9,7 @@
  */
 #ifndef __LOG_H__
 #define __LOG_H__
-#include <utility.h>
+#include <util.h>
 
 #include <cstdint>
 #include <vector>
