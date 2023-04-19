@@ -54,6 +54,38 @@ class LogKV
     Log *log;
 
     size_t tableSize;
+    const uint64_t RecoverBufSize = 512 * (1 << 10);  // 512Mb recover buf
+
+    /**
+     * replayEntry replays the given log slice
+     */
+    void replayChunk(Chunk *chunk, char *chunkPayload)
+    {
+        const static int payloadOffset = offsetof(Entry, payload);
+        Entry *logEntry;
+        uint64_t entryOffset = 0;
+        std::string key;
+        std::string val;
+
+        while (entryOffset < chunk->getCapacity())
+        {
+            /** TODO: is copy one-by-one a good idea?  */
+            logEntry = (Entry *)(chunkPayload + entryOffset);
+            key = std::string((char *)logEntry->payload);
+            val = std::string((char *)logEntry->payload + logEntry->keySize);
+
+            if (logEntry->version == -1)
+            {
+                deleteK(key);
+            }
+            else
+            {
+                put(key, &val);
+            }
+            entryOffset +=
+                payloadOffset + logEntry->keySize + logEntry->valSize;
+        }
+    }
 };
 
 #endif

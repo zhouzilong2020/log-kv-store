@@ -10,18 +10,32 @@
 #ifndef __LOG_H__
 #define __LOG_H__
 #include <chunk.h>
-#include <util.h>
 
 #include <cstdint>
+#include <fstream>
+#include <iostream>
+#include <unordered_map>
 #include <vector>
+
+#include "../include/util.h"
+
+// TODO: make it configurable
+static std::string persistRoot = "./.persist";
 
 // on disk meta info, one per persistent file
 struct PersistentMetaInfoFile
 {
     uint64_t createdTs;
     uint64_t updatedTs;
-    uint64_t tail;    // tail points to the last log in this file
-    uint64_t logCnt;  // the number of logs in the file
+    uint64_t tail;      // tail points to the last log in this file
+    uint64_t chunkCnt;  // the number of chunk in the file
+    PersistentMetaInfoFile() {}
+    PersistentMetaInfoFile(uint64_t ptail, uint64_t chunkCnt)
+        : tail(tail), chunkCnt(chunkCnt)
+    {
+        createdTs = getTS();
+        updatedTs = createdTs;
+    }
 };
 typedef struct PersistentMetaInfoFile PersistentMetaInfoFile;
 
@@ -54,17 +68,18 @@ class Log
      * This function load the log from the disk to recover
      * the in-memory log, after a failure.
      */
-    void recover();
+    void recover(std::unordered_map<std::string, Entry *> &kvTable) { return; };
 
    private:
-    const int ChunkSize = 1 << 21;   // 2Mb chunk size
     Chunk *head;                     // head points to current chunk
     std::vector<Chunk *> chunkList;  // a list of chunks
 
-    // int lastWrite;  // specifies the time interval that a disk write will
-    //                 // be triggered
-    // int fileCnt;
-    // const int WriteBackInterval = 5;  // 5s
+    int fileCnt;           // persist log file number
+    int nextPersistChunk;  // nextPersistChunk points to the next log
+                           // that needed to be persisted to disk
+
+    const uint64_t ChunkSize = 1 << 21;               // 2Mb chunk size
+    const uint64_t FileSize = 1 << 31;                // 2Gb file size
 
     /*
      * expend allocates a new chunk of memory,  the log.
@@ -81,25 +96,60 @@ class Log
         head = newChunk;
 
         // write back happens whenever a segment is filled
-        persist();
+        if (chunkList.size() != 1) persist();
     }
 
     /*
      * compact compacts the log, removing unnecessary entries.
      */
-    int compact()
-    {
-        // TODO
-        return 1;
-    }
+    int compact() { return 1; }
 
     /*
      * write2Disk writes the current log to the disk.
      */
     int persist()
     {
-        // TODO
-        return 1;
+        std::string filename = persistRoot + "/log-" + std::to_string(fileCnt);
+        PersistentMetaInfoFile fileMeta;
+
+        // create if not exist, otherwise open
+        std::fstream fp(filename, std::ios::binary | std::ios::in |
+                                      std::ios::out | std::ios::ate);
+        std::cout << "file size " << fp.tellp() << std::endl;
+        if (fp.tellg() == 0)  // newly created file
+        {
+            // init file meta info
+            printf("init file meta info\n");
+            fileMeta =
+                PersistentMetaInfoFile(sizeof(PersistentMetaInfoFile), 0);
+            fp.write((char *)&fileMeta, sizeof(PersistentMetaInfoFile));
+        }
+        else  // file already exists
+        {
+            fp.seekg(0, std::ios::beg);
+            fp.read((char *)&fileMeta, sizeof(PersistentMetaInfoFile));
+        }
+
+        printf("file status: %llu %llu %llu %llu\n", fileMeta.chunkCnt,
+               fileMeta.createdTs, fileMeta.updatedTs, fileMeta.tail);
+
+        // write ahead
+        fp.write((char *)head, sizeof(Chunk));
+        fp.write(head->getHead(), head->getCapacity());
+
+        fileMeta.updatedTs = getTS();
+        fileMeta.chunkCnt++;
+        fileMeta.tail += ChunkSize;
+        fp.seekp(0, std::ios::beg);
+        // commit begins
+        fp.write((char *)&fileMeta, sizeof(PersistentMetaInfoFile));
+        fp.close();
+        // commit ends
+
+        nextPersistChunk++;
+        // ready to write next file when the current file reachs 2Gb
+        if (fileMeta.chunkCnt * ChunkSize == FileSize) fileCnt++;
+        return 0;
     }
 
     /**
@@ -111,6 +161,7 @@ class Log
         // TODO
         return 1;
     }
+
 };
 
 #endif

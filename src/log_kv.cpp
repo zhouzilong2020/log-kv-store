@@ -5,6 +5,7 @@
  * client.
  */
 
+#include <dirent.h>
 #include <log.h>
 #include <log_kv.h>
 #include <util.h>
@@ -70,4 +71,67 @@ void LogKV::deleteK(std::string &key)
 size_t LogKV::size()
 {
     return tableSize;
+}
+
+int LogKV::recover()
+{
+    DIR *dr;
+    struct dirent *it;
+    std::vector<std::pair<int, std::string>> filenames;
+
+    // gather all files to be read
+    dr = opendir(persistRoot.c_str());
+    if (dr)
+    {
+        while ((it = readdir(dr)) != NULL)
+        {
+            printf("%s\n", it->d_name);
+            filenames.push_back(
+                std::pair<int, std::string>(it->d_namlen, it->d_name));
+        }
+        // sort it in log file generation order
+        std::sort(filenames.begin(), filenames.end());
+    }
+
+    std::fstream fp;
+    PersistentMetaInfoFile fileMeta;
+    char *logBuf =
+        (char *)malloc(RecoverBufSize);  // 512Mb buffer for log replay
+
+    Chunk *chunk;
+    char *chunkPayload;
+    uint64_t chunkOffset;
+
+    // read through all files
+    for (auto &i : filenames)
+    {
+        printf("Start: %s\n", i.second.c_str());
+        fp.open(i.second, std::ios::binary | std::ios::in);
+        fp.seekg(0, std::ios::beg);
+        // read te file meta
+        fp.read((char *)&fileMeta, sizeof(PersistentMetaInfoFile));
+
+        while (!fp.eof())
+        {
+            // read the 512Mb log to parse each I/O
+            fp.read((char *)logBuf, RecoverBufSize);
+
+            // replay the log in terms of chunk objects
+            chunkOffset = 0;
+            while (chunkOffset < RecoverBufSize)
+            {
+                // get chunk meta and payload
+                chunk = (Chunk *)(logBuf + chunkOffset);
+                chunkPayload = logBuf + chunkOffset + sizeof(Chunk);
+
+                // replay the entries in the current chunk
+                replayChunk(chunk, chunkPayload);
+
+                // go to the next chunk in this 512Mb log slice
+                chunkOffset += sizeof(Chunk) + chunk->getCapacity();
+            }
+        }
+    }
+
+    return 0;
 }

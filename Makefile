@@ -6,6 +6,7 @@ INCLUDE_DIR = include
 SRC_DIR = src
 BUILD_DIR = build
 TEST_DIR = test
+LOG_PERSIST = .persist
 
 SRCS = $(wildcard $(SRC_DIR)/*.cpp)
 OBJS = $(patsubst $(SRC_DIR)/%.cpp,$(BUILD_DIR)/%.o,$(SRCS))
@@ -34,6 +35,6 @@ $(BUILD_DIR):
 -include $(OBJS:.o=.d) $(TEST_OBJS:.o=.d)
 
 clean:
-	rm -rf $(BUILD_DIR) $(TARGET)
+	rm -rf $(BUILD_DIR) $(TARGET) $(LOG_PERSIST)
 
 
