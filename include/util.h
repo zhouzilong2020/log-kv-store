@@ -39,11 +39,6 @@ void *setClock();
  */
 std::chrono::microseconds getOpTime();
 
-/**
- * getOpTime returns the time interval, which is the
- * difference between end and start, in milliseconds
- *
- */
-std::string getTimeFormat(const std::string &format = "%Y-%m-%d");
+uint64_t getTS();
 
 #endif

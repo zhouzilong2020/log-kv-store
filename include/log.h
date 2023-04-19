@@ -22,6 +22,35 @@ struct Entry
     void *payload;
 };
 
+// on disk meta info, one per persistent file
+struct PersistentMetaInfoFile
+{
+    uint64_t createdTs;
+    uint64_t updatedTs;
+    uint64_t tail;    // tail points to the last log in this file
+    uint64_t logCnt;  // the number of logs in the file
+};
+typedef struct PersistentMetaInfoFile PersistentMetaInfoFile;
+
+// on disk meta info, one per log
+struct PersistentMetaInfoLog
+{
+    uint64_t createdTs;
+    uint64_t updatedTs;
+    uint64_t size;      // size is the size of the log
+    uint64_t entryCnt;  // the number of log entry that stores in this log
+    PersistentMetaInfoLog(){};  // default constructor
+    PersistentMetaInfoLog(uint64_t &size, uint64_t &entryCnt)
+    {
+        uint64_t now = getTS();
+        createdTs = now;
+        updatedTs = now;
+        size = size;
+        entryCnt = entryCnt;
+    };
+};
+typedef struct PersistentMetaInfoFile PersistentMetaInfoFile;
+
 /**
  * The log data structure uses a singly linked
  * subarrays as the underlying data structure.
@@ -97,7 +126,7 @@ class Log
     /*
      * write2Disk writes the current log to the disk.
      */
-    int write2Disk()
+    int persist()
     {
         // TODO
         return 1;
