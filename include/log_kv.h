@@ -49,7 +49,7 @@ class LogKV
 
    private:
     // this map stores the current key-value table
-    std::unordered_map<std::string, void *> kvTable;
+    std::unordered_map<std::string, Entry *> kvTable;
     // data structure that maintains the log
     Log *log;
 

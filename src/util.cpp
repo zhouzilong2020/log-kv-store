@@ -2,7 +2,7 @@
  * This file implements any helper functions.
  */
 
-#include <util.h>
+#include "../include/util.h"
 
 extern std::chrono::time_point<std::chrono::high_resolution_clock> start =
     std::chrono::high_resolution_clock::now();
@@ -20,12 +20,10 @@ std::chrono::microseconds getOpTime()
     return duration;
 }
 
-std::string getTimeFormat(const std::string &format)
+uint64_t getTS()
 {
-    time_t now = time(0);
-    struct tm tStruct;
-    char buf[80];
-    tStruct = *localtime(&now);
-    strftime(buf, sizeof(buf), format.c_str(), &tStruct);
-    return buf;
+    const auto p1 = std::chrono::system_clock::now();
+    return std::chrono::duration_cast<std::chrono::seconds>(
+               p1.time_since_epoch())
+        .count();
 }
