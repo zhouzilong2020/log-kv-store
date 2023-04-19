@@ -11,44 +11,21 @@
 
 Log::Log()
 {
-    // initialize the meta data
-    entryCnt = 0;
-    byteSize = 0;
-    lastWrite = 0;
-    fileCnt = 0;
-    currentLogSize = 0;
-
-    // initialize the first memory chunk
+    head = NULL;
     expend();
 }
 
-void *Log::append(int version, std::string &key, const std::string *val)
+Entry *Log::append(int version, std::string &key, const std::string *val)
 {
-    const static int offset = offsetof(Entry, payload);
-
-    int keySize = key.size() + 1;  // including the null char
-    int valSize = val == NULL ? 0 : val->size() + 1;
-    int entrySize = offset + keySize + valSize;
-
-    // check size
-    if (entrySize + currentLogSize > ChunkSize)
+    Entry *entryPtr = head->append(version, key, val);
+    if (entryPtr == NULL)  // the current chunk is full
     {
         expend();
+        // this time it should work
+        entryPtr = head->append(version, key, val);
     }
-    currentLogSize += entrySize;
 
-    Entry *newEntry = (Entry *)head;
-    newEntry->version = version;
-    newEntry->keySize = keySize;
-    newEntry->valSize = valSize;
-    // FIXME: is memory alignment a problem?
-    strlcpy((char *)&newEntry->payload, key.c_str(), newEntry->keySize);
-    if (val)
-        strlcpy((char *)&newEntry->payload + keySize, val->c_str(),
-                newEntry->valSize);
-    head = (char *)head + entrySize;
-
-    return newEntry;
+    return entryPtr;
 }
 
 void Log::recover()

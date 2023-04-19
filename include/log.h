@@ -9,18 +9,11 @@
  */
 #ifndef __LOG_H__
 #define __LOG_H__
+#include <chunk.h>
 #include <util.h>
 
 #include <cstdint>
 #include <vector>
-
-struct Entry
-{
-    uint16_t version;
-    uint16_t keySize;
-    uint16_t valSize;
-    void *payload;
-};
 
 // on disk meta info, one per persistent file
 struct PersistentMetaInfoFile
@@ -32,29 +25,10 @@ struct PersistentMetaInfoFile
 };
 typedef struct PersistentMetaInfoFile PersistentMetaInfoFile;
 
-// on disk meta info, one per log
-struct PersistentMetaInfoLog
-{
-    uint64_t createdTs;
-    uint64_t updatedTs;
-    uint64_t size;      // size is the size of the log
-    uint64_t entryCnt;  // the number of log entry that stores in this log
-    PersistentMetaInfoLog(){};  // default constructor
-    PersistentMetaInfoLog(uint64_t &size, uint64_t &entryCnt)
-    {
-        uint64_t now = getTS();
-        createdTs = now;
-        updatedTs = now;
-        size = size;
-        entryCnt = entryCnt;
-    };
-};
-typedef struct PersistentMetaInfoFile PersistentMetaInfoFile;
-
 /**
  * The log data structure uses a singly linked
- * subarrays as the underlying data structure.
- * The subarrays are of fixed length (2MB), which
+ * sub arrays as the underlying data structure.
+ * The sub arrays are of fixed length (2MB), which
  * allocated on the heap when the current space is
  * not enough.
  */
@@ -74,7 +48,7 @@ class Log
      * Note that a -1 version number stands for a deletion.
      * val is nullable so we use pointer here.
      */
-    void *append(int version, std::string &key, const std::string *val);
+    Entry *append(int version, std::string &key, const std::string *val);
 
     /**
      * This function load the log from the disk to recover
@@ -83,32 +57,28 @@ class Log
     void recover();
 
    private:
-    void *head;  // points to the start of first log segment
-    int currentLogSize;
+    const int ChunkSize = 1 << 21;   // 2Mb chunk size
+    Chunk *head;                     // head points to current chunk
+    std::vector<Chunk *> chunkList;  // a list of chunks
 
-    // points to the first writable byte of the current log
-    std::vector<void *> logList;
-
-    long entryCnt;  // record the number of entries currently in the log
-    long byteSize;  // log size in bytes
-    int lastWrite;  // specifies the time interval that a disk write will
-                    // be triggered
-    int fileCnt;
-
-    const int ChunkSize = 1 << 21;    // 2Mb chunk size
-    const int WriteBackInterval = 5;  // 5s
+    // int lastWrite;  // specifies the time interval that a disk write will
+    //                 // be triggered
+    // int fileCnt;
+    // const int WriteBackInterval = 5;  // 5s
 
     /*
      * expend allocates a new chunk of memory,  the log.
      */
     void expend()
     {
-        printf("expend the log space\n");
-        // expend the log space by default chunk
-        void *new_head = std::malloc(ChunkSize);
-        logList.push_back(new_head);
-        head = new_head;
-        currentLogSize = 0;
+        Chunk *newChunk = new Chunk(ChunkSize);
+        if (newChunk == NULL)
+        {
+            printf("Log::expend: OOM failed to allocate new chunk\n");
+            exit(1);
+        }
+        chunkList.push_back(newChunk);
+        head = newChunk;
 
         // write back happens whenever a segment is filled
         persist();
