@@ -1,5 +1,6 @@
 #ifndef __CHUNK_H__
 #define __CHUNK_H__
+#include <stddef.h>
 #include <util.h>
 
 /**
@@ -19,6 +20,7 @@ typedef struct
 class Chunk
 {
    public:
+    Chunk() { head = NULL; };
     Chunk(const int &size)
     {
         // we subtract the size of Chunk to make sure that each chunk has
@@ -31,7 +33,14 @@ class Chunk
         createdTs = getTS();
         updatedTs = createdTs;
     };
-    ~Chunk() { free(head); };
+    ~Chunk()
+    {
+        if (head) free(head);
+    };
+
+    char *getHead() { return head; };
+
+    int getCapacity() { return capacity; };
 
     // append appends the key-value pair to the chunk. It returns a pointer
     // points to the entry if success, NULL otherwise.
