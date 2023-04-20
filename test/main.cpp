@@ -15,7 +15,7 @@ std::string randomString(uint strLen)
     std::string str;
     str.reserve((size_t)strLen);
 
-    for (int i = 0; i < strLen; i++)
+    for (uint i = 0; i < strLen; i++)
     {
         char charASCII = 'a' + arc4random() % 26;
         str.append(&charASCII);
@@ -27,16 +27,19 @@ std::string randomString(uint strLen)
 bool cmpTables(LogKV &logKV, std::unordered_map<std::string, std::string> &map)
 {
     assert(logKV.size() == map.size());
+    int cnt = 0;
     for (auto kv : map)
     {
         auto ptr = logKV.get(kv.first);
         if (ptr == nullptr || kv.second != *ptr)
         {
-            fprintf(stderr, "key\n%s\nexpected (%lu)\n%s\ngot (%lu)\n%s\n",
-                    kv.first.c_str(), kv.second.size(), kv.second.c_str(),
+            fprintf(stderr,
+                    "wrong at %d key\n%s\nexpected (%lu)\n%s\ngot (%lu)\n%s\n",
+                    cnt, kv.first.c_str(), kv.second.size(), kv.second.c_str(),
                     ptr->size(), ptr->c_str());
             return false;
         }
+        cnt++;
     }
     return true;
 }
@@ -178,12 +181,36 @@ void testBigKV()
     printf("Succeed!\n");
 }
 
+void testPersist()
+{
+    printf("testing testPersist\n");
+
+    LogKV logKV;
+    std::unordered_map<std::string, std::string> map;
+
+    // 1k entries
+    for (int i = 0; i < 1 << 17; i++)
+    {
+        std::string key = randomString(10);
+        std::string val = randomString(20);
+        map[key] = val;
+        logKV.put(key, &val);
+    }
+
+    assert(cmpTables(logKV, map));
+
+    printf("Succeed!\n");
+}
+
 void runTest()
 {
     testBasicGetPut();
     testBasicDelete();
     testAdvanced();
     testBigKV();
+    testPersist();
+}
+
 static struct option long_options[] = {
     {"help", no_argument, 0, 'h'},
     {"type", required_argument, 0, 't'},
