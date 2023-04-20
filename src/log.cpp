@@ -28,7 +28,8 @@ Log::Log()
     }
 }
 
-Entry *Log::append(int version, std::string &key, const std::string *val)
+Entry *Log::append(const int version, const std::string &key,
+                   const std::string *val)
 {
     Entry *entryPtr = head->append(version, key, val);
     if (entryPtr == NULL)  // the current chunk is full

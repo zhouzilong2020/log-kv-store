@@ -7,13 +7,13 @@
 #include <naive_kv.h>
 #include <util.h>
 
-int NaiveKV::put(const std::string key, const std::string val)
+int NaiveKV::put(const std::string &key, const std::string *val)
 {
-    kvTable[key] = val;
+    kvTable[key] = *val;
     return 0;
 }
 
-std::string NaiveKV::get(const std::string key)
+std::unique_ptr<std::string> NaiveKV::get(const std::string &key)
 {
     auto it = kvTable.find(key);
     if (it == kvTable.end())
@@ -21,10 +21,11 @@ std::string NaiveKV::get(const std::string key)
         return NULL;
     }
 
-    return it->second;
+    using UniqueStrPtr = std::unique_ptr<std::string>;
+    return UniqueStrPtr(new std::string(it->second));
 }
 
-int NaiveKV::deleteK(std::string key)
+void NaiveKV::deleteK(const std::string &key)
 {
-    return kvTable.erase(key);
+    kvTable.erase(key);
 }

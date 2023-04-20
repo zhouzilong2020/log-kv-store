@@ -44,7 +44,8 @@ class Chunk
 
     // append appends the key-value pair to the chunk. It returns a pointer
     // points to the entry if success, NULL otherwise.
-    Entry *append(int version, std::string &key, const std::string *val)
+    Entry *append(const int version, const std::string &key,
+                  const std::string *val)
     {
         const static int offset = offsetof(Entry, payload);
         int keySize = key.size() + 1;  // including the null char

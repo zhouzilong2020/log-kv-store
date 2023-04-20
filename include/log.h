@@ -49,10 +49,17 @@ typedef struct PersistentMetaInfoFile PersistentMetaInfoFile;
 class Log
 {
    public:
-    /**
-     * initLog initialize the log data structure
-     */
     Log();
+
+    ~Log()
+    {
+        // FIXME:partial persist
+        // persist();
+        for (auto chunk : chunkList)
+        {
+            delete chunk;
+        }
+    }
 
     /**
      * This function append the key-value pair,
@@ -62,7 +69,8 @@ class Log
      * Note that a -1 version number stands for a deletion.
      * val is nullable so we use pointer here.
      */
-    Entry *append(int version, std::string &key, const std::string *val);
+    Entry *append(const int version, const std::string &key,
+                  const std::string *val);
 
     /**
      * This function load the log from the disk to recover
