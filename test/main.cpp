@@ -242,7 +242,6 @@ int main(int argc, char **argv)
         case '?':
             print_usage();
             exit(EXIT_SUCCESS);
-            break;
         case 't':
             // Handle input option
             if (strcmp(optarg, "naive") == 0)
@@ -257,11 +256,11 @@ int main(int argc, char **argv)
             break;
         case 'T':
             runTest();
-            break;
+            exit(EXIT_SUCCESS);
+
         default:
             print_usage();
             exit(EXIT_SUCCESS);
-            break;
         }
     }
 
