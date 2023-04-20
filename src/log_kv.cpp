@@ -16,6 +16,22 @@ LogKV::LogKV()
     tableSize = 0;
 }
 
+LogKV::~LogKV()
+{
+    delete log;
+
+    if (existDir(PersistRoot.c_str()))
+    {
+        char cmd[10];
+        printf("%s", RemovePrompt);
+        fgets(cmd, sizeof(cmd), stdin);
+        if (strcmp(cmd, "YES\n") != 0) return;
+
+        // remove the persistence log when the table is destructed
+        removeDir(PersistRoot.c_str());
+    }
+}
+
 int LogKV::put(std::string &key, const std::string *val)
 {
     auto it = kvTable.find(key);
@@ -63,7 +79,7 @@ void LogKV::deleteK(std::string &key)
         return;
     }
 
-    log->append(-1, key, NULL);
+    log->append(std::numeric_limits<uint16_t>::max(), key, NULL);
     kvTable.erase(it);
     tableSize--;
 }
@@ -75,23 +91,10 @@ size_t LogKV::size()
 
 int LogKV::recover()
 {
-    DIR *dr;
-    struct dirent *it;
-    std::vector<std::pair<int, std::string>> filenames;
+    log->recover(true);
 
-    // gather all files to be read
-    dr = opendir(persistRoot.c_str());
-    if (dr)
-    {
-        while ((it = readdir(dr)) != NULL)
-        {
-            printf("%s\n", it->d_name);
-            filenames.push_back(
-                std::pair<int, std::string>(it->d_namlen, it->d_name));
-        }
-        // sort it in log file generation order
-        std::sort(filenames.begin(), filenames.end());
-    }
+    std::vector<std::string> files;
+    listDir(PersistRoot.c_str(), files);
 
     std::fstream fp;
     PersistentMetaInfoFile fileMeta;
@@ -101,15 +104,19 @@ int LogKV::recover()
     Chunk *chunk;
     char *chunkPayload;
     uint64_t chunkOffset;
+    uint64_t chunkCnt;
 
     // read through all files
-    for (auto &i : filenames)
+    for (auto &path : files)
     {
-        printf("Start: %s\n", i.second.c_str());
-        fp.open(i.second, std::ios::binary | std::ios::in);
+        // printf("\nStart Recovery: %llu %s\n", RecoverBufSize, path.c_str());
+        fp.open(path, std::ios::binary | std::ios::in);
         fp.seekg(0, std::ios::beg);
         // read te file meta
         fp.read((char *)&fileMeta, sizeof(PersistentMetaInfoFile));
+        // printf("Recovery file header %llu %llu %llu %llu\n",
+        // fileMeta.createdTs,
+        //        fileMeta.updatedTs, fileMeta.chunkCnt, fileMeta.tail);
 
         while (!fp.eof())
         {
@@ -118,20 +125,44 @@ int LogKV::recover()
 
             // replay the log in terms of chunk objects
             chunkOffset = 0;
-            while (chunkOffset < RecoverBufSize)
+            chunkCnt = 0;
+            while (chunkOffset < RecoverBufSize && chunkCnt < fileMeta.chunkCnt)
             {
+                // printf("\nchunkOffset %llu chunkCnt %llu\n", chunkOffset,
+                //        chunkCnt);
+
                 // get chunk meta and payload
                 chunk = (Chunk *)(logBuf + chunkOffset);
                 chunkPayload = logBuf + chunkOffset + sizeof(Chunk);
+                // if (chunkCnt == 0 || chunkCnt == 1 || chunkCnt == 2)
+                //     printf(
+                //         "Recovery chunk info %d %d %d %d %d | payload offset
+                //         "
+                //         "%llu\n",
+                //         chunk->get(CREATEDTS), chunk->get(UPDATEDTS),
+                //         chunk->get(ENTRYCNT), chunk->get(CAPACITY),
+                //         chunk->get(USED), chunkOffset + sizeof(Chunk));
 
                 // replay the entries in the current chunk
                 replayChunk(chunk, chunkPayload);
 
                 // go to the next chunk in this 512Mb log slice
                 chunkOffset += sizeof(Chunk) + chunk->getCapacity();
+                chunkCnt++;
             }
         }
     }
 
+    log->recover(false);
     return 0;
+}
+
+void LogKV::failure()
+{
+    kvTable.clear();
+    delete log;
+    log = new Log;
+
+    // clear out the table size
+    tableSize = 0;
 }

@@ -10,16 +10,25 @@
 #include <string>
 #include <unordered_map>
 
+const static char *RemovePrompt =
+    "\n### Do you want to remove persist logs? (YES/ANYTHING) >>> ";
+
 class LogKV
 {
    public:
     LogKV();
+    ~LogKV();
 
     /**
      * This function replaus the disk log to reconstruct the
      * key-value table, after a failure.
      */
     int recover();
+
+    /**
+     * failure simulates a machine failure by
+     */
+    void failure();
 
     /**
      * Client can use <code>put</code> to update
@@ -47,6 +56,8 @@ class LogKV
      */
     size_t size();
 
+    const std::vector<Chunk *> *getChunkList() { return log->getChunkList(); }
+
    private:
     // this map stores the current key-value table
     std::unordered_map<std::string, Entry *> kvTable;
@@ -54,7 +65,7 @@ class LogKV
     Log *log;
 
     size_t tableSize;
-    const uint64_t RecoverBufSize = 512 * (1 << 10);  // 512Mb recover buf
+    const uint64_t RecoverBufSize = 512 * (1 << 20);  // 512Mb recover buf
 
     /**
      * replayEntry replays the given log slice
@@ -66,15 +77,23 @@ class LogKV
         uint64_t entryOffset = 0;
         std::string key;
         std::string val;
+        int entryCnt = 0;
 
-        while (entryOffset < chunk->getCapacity())
+        while (entryCnt < chunk->get(ENTRYCNT))
         {
             /** TODO: is copy one-by-one a good idea?  */
+            // printf("entryOffset %lld\n", entryOffset);
             logEntry = (Entry *)(chunkPayload + entryOffset);
-            key = std::string((char *)logEntry->payload);
-            val = std::string((char *)logEntry->payload + logEntry->keySize);
+            // if (entryCnt == 0)
+            //     printf("Recover Entry info %d %d %d | %s <-> %s\n",
+            //            logEntry->version, logEntry->keySize,
+            //            logEntry->valSize, (char *)&logEntry->payload, (char
+            //            *)&logEntry->payload + logEntry->keySize);
 
-            if (logEntry->version == -1)
+            key = std::string((char *)&logEntry->payload);
+            val = std::string((char *)&logEntry->payload + logEntry->keySize);
+
+            if (logEntry->version == std::numeric_limits<uint16_t>::max())
             {
                 deleteK(key);
             }
@@ -82,8 +101,10 @@ class LogKV
             {
                 put(key, &val);
             }
+
             entryOffset +=
                 payloadOffset + logEntry->keySize + logEntry->valSize;
+            entryCnt++;
         }
     }
 };

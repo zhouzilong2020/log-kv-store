@@ -14,6 +14,23 @@ typedef struct
     void *payload;  // key & value
 } Entry;
 
+enum chunkMeta
+{
+    CREATEDTS,
+    UPDATEDTS,
+    CAPACITY,
+    USED,
+    ENTRYCNT
+};
+
+// /**
+//  * parseEntry parse the entry starting at address payload
+//  * and returns the address pointing to the start of the
+//  * next entry
+//  */
+// char *parseEntry(char *payload, Entry &entry,
+//                  std::pair<std::string, const std::string *> &kvPair);
+
 /**
  * Chunk is the smallest unit of memory allocation. It is managed by Log.
  */
@@ -44,7 +61,7 @@ class Chunk
 
     // append appends the key-value pair to the chunk. It returns a pointer
     // points to the entry if success, NULL otherwise.
-    Entry *append(int version, std::string &key, const std::string *val)
+    Entry *append(uint16_t version, std::string &key, const std::string *val)
     {
         const static int offset = offsetof(Entry, payload);
         int keySize = key.size() + 1;  // including the null char
@@ -65,7 +82,7 @@ class Chunk
         if (val)
             strlcpy((char *)&newEntry->payload + keySize, val->c_str(),
                     newEntry->valSize);
-        head = (char *)head + entrySize;
+        // head = (char *)head + entrySize;
 
         updatedTs = getTS();
         // commit point begin
@@ -74,7 +91,35 @@ class Chunk
         used += entrySize;
         // commit point end
 
+        // if (used == 2097112)
+        // {
+        //     printf("%d | %d | %d | %s <-> %s\n", used, entryCnt, entrySize,
+        //            key.c_str(), val->c_str());
+        // }
+        // if (entryCnt <= 75690 && entryCnt > 75680)
+        // {
+        //     printf("%d | %d | %d | %s <-> %s\n", used, entryCnt, entrySize,
+        //            key.c_str(), val->c_str());
+        // }
+
         return newEntry;
+    }
+
+    int get(chunkMeta target)
+    {
+        switch (target)
+        {
+        case CREATEDTS:
+            return createdTs;
+        case UPDATEDTS:
+            return updatedTs;
+        case CAPACITY:
+            return capacity;
+        case USED:
+            return used;
+        case ENTRYCNT:
+            return entryCnt;
+        }
     }
 
    private:
@@ -86,5 +131,16 @@ class Chunk
     char *head;
     char *next;
 };
+
+// char *parseEntry(char *payload, Entry &entry,
+//                  std::pair<const std::string *, const std::string *> &kvPair)
+// {
+//     Entry *logEntry = (Entry *)payload;
+//     entry.version = logEntry->version;
+//     entry.keySize = logEntry->keySize;
+//     entry.valSize = logEntry->valSize;
+//     kvPair.first = logEntry->payload;
+
+// }
 
 #endif

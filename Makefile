@@ -35,6 +35,6 @@ $(BUILD_DIR):
 -include $(OBJS:.o=.d) $(TEST_OBJS:.o=.d)
 
 clean:
-	rm -rf $(BUILD_DIR) $(TARGET) $(LOG_PERSIST)
+	rm -rf $(BUILD_DIR) $(TARGET)
 
 
