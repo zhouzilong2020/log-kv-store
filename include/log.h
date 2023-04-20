@@ -51,13 +51,15 @@ class Log
    public:
     Log();
 
+    Log(std::unordered_map<std::string, Entry *> *kvTable);
+
     ~Log()
     {
         // FIXME:partial persist
         // persist();
         for (auto chunk : chunkList)
         {
-            delete chunk;
+            if (chunk) delete chunk;
         }
     }
 
@@ -78,6 +80,8 @@ class Log
      */
     void recover(std::unordered_map<std::string, Entry *> &kvTable) { return; };
 
+    int chunkSize() { return chunkList.size(); };
+
    private:
     Chunk *head;                     // head points to current chunk
     std::vector<Chunk *> chunkList;  // a list of chunks
@@ -93,7 +97,7 @@ class Log
     /*
      * expend allocates a new chunk of memory,  the log.
      */
-    void expend()
+    void expend(bool doPersist = true)
     {
         Chunk *newChunk = new Chunk(ChunkSize);
         if (newChunk == NULL)
@@ -105,7 +109,7 @@ class Log
         head = newChunk;
 
         // write back happens whenever a segment is filled
-        if (chunkList.size() != 1) persist();
+        if (chunkList.size() != 1 && doPersist) persist();
     }
 
     /*
@@ -114,7 +118,7 @@ class Log
     int compact() { return 1; }
 
     /*
-     * write2Disk writes the current log to the disk.
+     * persist writes the current log to the disk.
      */
     int persist()
     {

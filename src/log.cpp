@@ -13,6 +13,27 @@
 #include <fstream>
 #include <string>
 
+Log::Log(std::unordered_map<std::string, Entry *> *kvTable)
+{
+    static int cnt = 0;
+    cnt++;
+
+    head = NULL;
+    fileCnt = 0;
+    nextPersistChunk = 0;
+    expend(false);
+    for (auto &kv : *kvTable)
+    {
+        auto newEntry = head->append(kv.second);
+        if (!newEntry)
+        {
+            expend(false);
+            newEntry = head->append(kv.second);
+        }
+        kv.second = newEntry;
+    }
+}
+
 Log::Log()
 {
     head = NULL;
@@ -40,8 +61,4 @@ Entry *Log::append(const int version, const std::string &key,
     }
 
     return entryPtr;
-}
-
-void Log::recover()
-{
 }

@@ -18,7 +18,7 @@ std::string randomString(uint strLen)
     for (uint i = 0; i < strLen; i++)
     {
         char charASCII = 'a' + arc4random() % 26;
-        str.append(&charASCII);
+        str.push_back(charASCII);
     }
 
     return str;
@@ -120,13 +120,14 @@ void testBasicDelete()
 
 void testAdvanced()
 {
-    printf("testing testAdvanced (2M kv with 0.1 deletes 0.2 updates)\n");
+    printf(
+        "testing testAdvanced (512K short kv with 0.1 deletes 0.2 updates)\n");
 
     LogKV logKV;
     std::unordered_map<std::string, std::string> map;
     std::vector<std::string> keys;
 
-    // 2M entries
+    // 512K entries
     for (int i = 0; i < (1 << 19); i++)
     {
         std::string key = randomString(10);
@@ -150,7 +151,7 @@ void testAdvanced()
         {
             int idx = arc4random() % keys.size();
             auto key = keys[idx];
-            std::string newVal = randomString(50);
+            std::string newVal = randomString(20);
             logKV.put(key, &newVal);
             map[key] = newVal;
         }
@@ -188,7 +189,7 @@ void testPersist()
     LogKV logKV;
     std::unordered_map<std::string, std::string> map;
 
-    // 1k entries
+    // big enough to trigger persist
     for (int i = 0; i < 1 << 17; i++)
     {
         std::string key = randomString(10);
@@ -214,7 +215,7 @@ void runTest()
 static struct option long_options[] = {
     {"help", no_argument, 0, 'h'},
     {"type", required_argument, 0, 't'},
-    {"test", optional_argument, 0, 'ts'},
+    {"test", optional_argument, 0, 'T'},
     {0, 0, 0, 0}  // indicate the end of the array
 };
 
@@ -257,7 +258,6 @@ int main(int argc, char **argv)
         case 'T':
             runTest();
             exit(EXIT_SUCCESS);
-
         default:
             print_usage();
             exit(EXIT_SUCCESS);
