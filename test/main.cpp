@@ -1,7 +1,4 @@
-/**
- * This file is used to launch the experiments.
- */
-
+#include <getopt.h>
 #include <log.h>
 #include <log_kv.h>
 #include <naive_kv.h>
@@ -187,10 +184,63 @@ void runTest()
     testBasicDelete();
     testAdvanced();
     testBigKV();
+static struct option long_options[] = {
+    {"help", no_argument, 0, 'h'},
+    {"type", required_argument, 0, 't'},
+    {"test", optional_argument, 0, 'ts'},
+    {0, 0, 0, 0}  // indicate the end of the array
+};
+
+void print_usage()
+{
+    printf("Usage: log_kv [OPTIONS]\n");
+    printf("Options:\n");
+    printf("  -h, --help   %s\n", "Display this help message");
+    printf("  -t, --type   %s\n",
+           "Choose the type of KVStore, possible options: [naive/log]");
+    printf("  -T, --test   %s\n", "Run build in test");
 }
 
 int main(int argc, char **argv)
 {
-    runTest();
-    return 0;
+    int option_index = 0;
+    int c;
+    KVStore *kv = NULL;
+    while ((c = getopt_long(argc, argv, "ht:T", long_options, &option_index)) !=
+           -1)
+    {
+        switch (c)
+        {
+        case 'h':
+        case '?':
+            print_usage();
+            exit(EXIT_SUCCESS);
+            break;
+        case 't':
+            // Handle input option
+            if (strcmp(optarg, "naive") == 0)
+                kv = new NaiveKV();
+            else if (strcmp(optarg, "log") == 0)
+                kv = new LogKV();
+            else
+            {
+                print_usage();
+                exit(EXIT_SUCCESS);
+            }
+            break;
+        case 'T':
+            runTest();
+            break;
+        default:
+            print_usage();
+            exit(EXIT_SUCCESS);
+            break;
+        }
+    }
+
+    if (kv)
+    {
+        kv->run();
+        delete kv;
+    }
 }
