@@ -42,6 +42,8 @@ class Chunk
 
     int getCapacity() { return capacity; };
 
+    int getSize() { return used; };
+
     Entry *append(const Entry *entry)
     {
         const static int offset = offsetof(Entry, payload);

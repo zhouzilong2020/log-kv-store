@@ -55,11 +55,19 @@ class LogKV : public KVStore
 
     void tryCompact()
     {
-        if (duplicatedEntryCnt < (1 << 15))
+        double currentUsg = double(log->currentChunkUsed()) /
+                            double(log->currentChunkCapacity());
+        if (duplicatedEntryCnt < (1 << 15) || currentUsg < 0.8)
         {
             return;
         }
         Log *compactedLog = new Log(&kvTable);
+
+        // make old persistent file hidden
+        log->hideFile();
+        // create new persistent file
+        compactedLog->persist();
+        log->removePersistedFile();
         if (log) delete log;
         log = compactedLog;
         duplicatedEntryCnt = 0;

@@ -60,7 +60,6 @@ void testBasicGetPut()
     }
 
     assert(cmpTables(logKV, map));
-
     printf("Succeed!\n");
 }
 
@@ -178,7 +177,6 @@ void testBigKV()
     }
 
     assert(cmpTables(logKV, map));
-
     printf("Succeed!\n");
 }
 
@@ -206,10 +204,19 @@ void testPersist()
 void runTest()
 {
     testBasicGetPut();
+    removeDir(".persist");
+
     testBasicDelete();
+    removeDir(".persist");
+
     testAdvanced();
+    removeDir(".persist");
+
     testBigKV();
+    removeDir(".persist");
+
     testPersist();
+    removeDir(".persist");
 }
 
 static struct option long_options[] = {
