@@ -1,7 +1,4 @@
-/**
- * This file is used to launch the experiments.
- */
-
+#include <getopt.h>
 #include <log.h>
 #include <log_kv.h>
 #include <naive_kv.h>
@@ -30,16 +27,19 @@ std::string randomString(uint strLen)
 bool cmpTables(LogKV &logKV, std::unordered_map<std::string, std::string> &map)
 {
     assert(logKV.size() == map.size());
+    int cnt = 0;
     for (auto kv : map)
     {
         auto ptr = logKV.get(kv.first);
         if (ptr == nullptr || kv.second != *ptr)
         {
-            fprintf(stderr, "key\n%s\nexpected (%lu)\n%s\ngot (%lu)\n%s\n",
-                    kv.first.c_str(), kv.second.size(), kv.second.c_str(),
+            fprintf(stderr,
+                    "wrong at %d key\n%s\nexpected (%lu)\n%s\ngot (%lu)\n%s\n",
+                    cnt, kv.first.c_str(), kv.second.size(), kv.second.c_str(),
                     ptr->size(), ptr->c_str());
             return false;
         }
+        cnt++;
     }
     return true;
 }
@@ -267,6 +267,7 @@ void testBigKV()
     printf("Succeed!\n");
 }
 
+
 void testRecoverDbg()
 {
     printf("testing testRecoverDbg\n");
@@ -283,7 +284,6 @@ void testRecoverDbg()
         map[key] = val;
         logKV.put(key, &val);
     }
-
     cmpTables(logKV, map);
 
     LogKV newLogKV;
@@ -318,6 +318,26 @@ void testRecoverBig()
     printf("Succeed!\n");
 }
 
+void testPersist()
+{
+    printf("testing testPersist\n");
+
+    LogKV logKV;
+    std::unordered_map<std::string, std::string> map;
+
+    // 1k entries
+    for (int i = 0; i < 1 << 17; i++)
+    {
+        std::string key = randomString(10);
+        std::string val = randomString(20);
+        map[key] = val;
+        logKV.put(key, &val);
+    }
+
+    assert(cmpTables(logKV, map));
+    printf("Succeed!\n");
+}
+
 void runTest()
 {
     testBasicGetPut();
@@ -326,10 +346,65 @@ void runTest()
     testBigKV();
     testRecoverDbg();
     testRecoverBig();
+    testPersist();
+}
+
+static struct option long_options[] = {
+    {"help", no_argument, 0, 'h'},
+    {"type", required_argument, 0, 't'},
+    {"test", optional_argument, 0, 'ts'},
+    {0, 0, 0, 0}  // indicate the end of the array
+};
+
+void print_usage()
+{
+    printf("Usage: log_kv [OPTIONS]\n");
+    printf("Options:\n");
+    printf("  -h, --help   %s\n", "Display this help message");
+    printf("  -t, --type   %s\n",
+           "Choose the type of KVStore, possible options: [naive/log]");
+    printf("  -T, --test   %s\n", "Run build in test");
 }
 
 int main(int argc, char **argv)
 {
-    runTest();
-    return 0;
+    int option_index = 0;
+    int c;
+    KVStore *kv = NULL;
+    while ((c = getopt_long(argc, argv, "ht:T", long_options, &option_index)) !=
+           -1)
+    {
+        switch (c)
+        {
+        case 'h':
+        case '?':
+            print_usage();
+            exit(EXIT_SUCCESS);
+        case 't':
+            // Handle input option
+            if (strcmp(optarg, "naive") == 0)
+                kv = new NaiveKV();
+            else if (strcmp(optarg, "log") == 0)
+                kv = new LogKV();
+            else
+            {
+                print_usage();
+                exit(EXIT_SUCCESS);
+            }
+            break;
+        case 'T':
+            runTest();
+            exit(EXIT_SUCCESS);
+
+        default:
+            print_usage();
+            exit(EXIT_SUCCESS);
+        }
+    }
+
+    if (kv)
+    {
+        kv->run();
+        delete kv;
+    }
 }

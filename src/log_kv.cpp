@@ -32,7 +32,7 @@ LogKV::~LogKV()
     }
 }
 
-int LogKV::put(std::string &key, const std::string *val)
+int LogKV::put(const std::string &key, const std::string *val)
 {
     auto it = kvTable.find(key);
     Entry *newEntry;
@@ -65,13 +65,11 @@ std::unique_ptr<std::string> LogKV::get(const std::string &key)
 
     Entry *entry = it->second;
     using UniqueStrPtr = std::unique_ptr<std::string>;
-    UniqueStrPtr ptr =
-        UniqueStrPtr(new std::string((char *)&entry->payload + entry->keySize));
-
-    return ptr;
+    return UniqueStrPtr(
+        new std::string((char *)&entry->payload + entry->keySize));
 }
 
-void LogKV::deleteK(std::string &key)
+void LogKV::deleteK(const std::string &key)
 {
     auto it = kvTable.find(key);
     if (it == kvTable.end())

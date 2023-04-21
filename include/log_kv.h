@@ -10,10 +10,12 @@
 #include <string>
 #include <unordered_map>
 
+#include "kv_store.h"
+
 const static char *RemovePrompt =
     "\n### Do you want to remove persist logs? (YES/ANYTHING) >>> ";
 
-class LogKV
+class LogKV : public KVStore
 {
    public:
     LogKV();
@@ -35,19 +37,19 @@ class LogKV
      * an key-value pair in the table
      * val is nullable so we use pointer here.
      */
-    int put(std::string &key, const std::string *val);
+    virtual int put(const std::string &key, const std::string *val) override;
 
     /**
      * Client can use <code>get</code> to get
      * the current value of the given key.
      */
-    std::unique_ptr<std::string> get(const std::string &key);
+    virtual std::unique_ptr<std::string> get(const std::string &key) override;
 
     /**
      * Client can use <code>delete_k</code> to
      * delete the key-value pair from the table.
      */
-    void deleteK(std::string &key);
+    virtual void deleteK(const std::string &key) override;
 
     /**
      * size returns the current size of the kv

@@ -23,13 +23,6 @@ enum chunkMeta
     ENTRYCNT
 };
 
-// /**
-//  * parseEntry parse the entry starting at address payload
-//  * and returns the address pointing to the start of the
-//  * next entry
-//  */
-// char *parseEntry(char *payload, Entry &entry,
-//                  std::pair<std::string, const std::string *> &kvPair);
 
 /**
  * Chunk is the smallest unit of memory allocation. It is managed by Log.
@@ -61,7 +54,8 @@ class Chunk
 
     // append appends the key-value pair to the chunk. It returns a pointer
     // points to the entry if success, NULL otherwise.
-    Entry *append(uint16_t version, std::string &key, const std::string *val)
+    Entry *append(const int version, const std::string &key,
+                  const std::string *val)
     {
         const static int offset = offsetof(Entry, payload);
         int keySize = key.size() + 1;  // including the null char
@@ -90,17 +84,6 @@ class Chunk
         entryCnt++;
         used += entrySize;
         // commit point end
-
-        // if (used == 2097112)
-        // {
-        //     printf("%d | %d | %d | %s <-> %s\n", used, entryCnt, entrySize,
-        //            key.c_str(), val->c_str());
-        // }
-        // if (entryCnt <= 75690 && entryCnt > 75680)
-        // {
-        //     printf("%d | %d | %d | %s <-> %s\n", used, entryCnt, entrySize,
-        //            key.c_str(), val->c_str());
-        // }
 
         return newEntry;
     }
@@ -132,15 +115,5 @@ class Chunk
     char *next;
 };
 
-// char *parseEntry(char *payload, Entry &entry,
-//                  std::pair<const std::string *, const std::string *> &kvPair)
-// {
-//     Entry *logEntry = (Entry *)payload;
-//     entry.version = logEntry->version;
-//     entry.keySize = logEntry->keySize;
-//     entry.valSize = logEntry->valSize;
-//     kvPair.first = logEntry->payload;
-
-// }
 
 #endif

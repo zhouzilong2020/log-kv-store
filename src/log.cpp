@@ -33,13 +33,16 @@ Log::Log()
 }
 Log::~Log()
 {
-    for (auto i : chunkList)
+    // FIXME:partial persist
+    // persist();
+    for (auto chunk : chunkList)
     {
-        delete i;
+        delete chunk;
     }
 }
 
-Entry *Log::append(uint16_t version, std::string &key, const std::string *val)
+Entry *Log::append(const int version, const std::string &key,
+                   const std::string *val)
 {
     Entry *entryPtr = head->append(version, key, val);
     if (entryPtr == NULL)  // the current chunk is full

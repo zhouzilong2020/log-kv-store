@@ -49,9 +49,6 @@ typedef struct PersistentMetaInfoFile PersistentMetaInfoFile;
 class Log
 {
    public:
-    /**
-     * initLog initialize the log data structure
-     */
     Log();
     ~Log();
 
@@ -63,7 +60,8 @@ class Log
      * Note that a -1 version number stands for a deletion.
      * val is nullable so we use pointer here.
      */
-    Entry *append(uint16_t version, std::string &key, const std::string *val);
+    Entry *append(const int version, const std::string &key,
+                  const std::string *val);
 
     /**
      * This function sets the recover indicator
@@ -167,7 +165,6 @@ class Log
         // commit ends
 
         nextPersistChunk++;
-        // if (nextPersistChunk == 4) exit(1);
         // persist to another file if the current file is full
         if (fileMeta.chunkCnt * ChunkSize == FileSize) fileCnt++;
         return 0;
