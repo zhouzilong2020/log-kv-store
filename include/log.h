@@ -23,21 +23,33 @@
 static std::string persistRoot = "./.persist";
 
 // on disk meta info, one per persistent file
-struct PersistentMetaInfoFile
+struct MetaInfoPersistentFile
 {
     uint64_t createdTs;
     uint64_t updatedTs;
     uint64_t tail;      // tail points to the last log in this file
     uint64_t chunkCnt;  // the number of chunk in the file
-    PersistentMetaInfoFile() {}
-    PersistentMetaInfoFile(uint64_t tail, uint64_t chunkCnt)
+    MetaInfoPersistentFile()
+    {
+        tail = sizeof(MetaInfoPersistentFile);
+        chunkCnt = 0;
+        createdTs = getTS();
+        updatedTs = createdTs;
+    }
+    MetaInfoPersistentFile(uint64_t tail, uint64_t chunkCnt)
         : tail(tail), chunkCnt(chunkCnt)
     {
         createdTs = getTS();
         updatedTs = createdTs;
     }
+    void addChunk(int chunkSize)
+    {
+        updatedTs = getTS();
+        chunkCnt++;
+        tail += chunkSize;
+    }
 };
-typedef struct PersistentMetaInfoFile PersistentMetaInfoFile;
+typedef struct MetaInfoPersistentFile MetaInfoPersistentFile;
 
 /**
  * The log data structure uses a singly linked
@@ -51,13 +63,15 @@ class Log
    public:
     Log();
 
+    Log(std::unordered_map<std::string, Entry *> *kvTable);
+
     ~Log()
     {
         // FIXME:partial persist
         // persist();
         for (auto chunk : chunkList)
         {
-            delete chunk;
+            if (chunk) delete chunk;
         }
     }
 
@@ -78,11 +92,26 @@ class Log
      */
     void recover(std::unordered_map<std::string, Entry *> &kvTable) { return; };
 
+    int chunkSize() { return chunkList.size(); };
+
+    int currentChunkUsed() { return head->getCapacity(); };
+
+    int currentChunkCapacity() { return chunkList.size(); };
+
+    int persist();
+
+    void hideFile();
+
+    void removePersistedFile();
+
    private:
     Chunk *head;                     // head points to current chunk
     std::vector<Chunk *> chunkList;  // a list of chunks
+    std::unordered_map<std::string, MetaInfoPersistentFile *>
+        persistentFileTable;  // on disk file, filename->metaInfo
 
-    int fileCnt;           // persist log file number
+    int currentFileId;     // currentFileId is the id of the current persistent
+                           // file
     int nextPersistChunk;  // nextPersistChunk points to the next log
                            // that needed to be persisted to disk
 
@@ -93,7 +122,7 @@ class Log
     /*
      * expend allocates a new chunk of memory,  the log.
      */
-    void expend()
+    void expend(bool doPersist = true)
     {
         Chunk *newChunk = new Chunk(ChunkSize);
         if (newChunk == NULL)
@@ -105,58 +134,13 @@ class Log
         head = newChunk;
 
         // write back happens whenever a segment is filled
-        if (chunkList.size() != 1) persist();
+        if (chunkList.size() != 1 && doPersist) persist();
     }
 
     /*
      * compact compacts the log, removing unnecessary entries.
      */
     int compact() { return 1; }
-
-    /*
-     * write2Disk writes the current log to the disk.
-     */
-    int persist()
-    {
-        std::string filename = persistRoot + "/log-" + std::to_string(fileCnt);
-        PersistentMetaInfoFile fileMeta;
-
-        // create if not exist, otherwise open
-        std::fstream fp;
-
-        fp.open(filename, std::ios::app);
-        if (fp.tellg() == 0)  // newly created file
-        {
-            // init file meta info
-            fileMeta =
-                PersistentMetaInfoFile(sizeof(PersistentMetaInfoFile), 0);
-            fp.write((char *)&fileMeta, sizeof(PersistentMetaInfoFile));
-        }
-        fp.close();
-
-        fp.open(filename);
-        fp.seekg(0, std::ios::beg);
-        fp.read((char *)&fileMeta, sizeof(PersistentMetaInfoFile));
-
-        // write ahead
-        fp.write((char *)head, sizeof(Chunk));
-        fp.write(head->getHead(), head->getCapacity());
-
-        fileMeta.updatedTs = getTS();
-        fileMeta.chunkCnt++;
-        fileMeta.tail += ChunkSize;
-        fp.seekp(0, std::ios::beg);
-        // commit begins
-        fp.write((char *)&fileMeta, sizeof(PersistentMetaInfoFile));
-        fp.close();
-        // commit ends
-
-        nextPersistChunk++;
-        if (nextPersistChunk == 4) exit(1);
-        // persist to another file if the current file is full
-        if (fileMeta.chunkCnt * ChunkSize == FileSize) fileCnt++;
-        return 0;
-    }
 
     /**
      * timerTrigger triggers the disk write periodically, even if the log

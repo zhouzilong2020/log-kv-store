@@ -13,6 +13,7 @@ LogKV::LogKV()
 {
     log = new Log();
     tableSize = 0;
+    duplicatedEntryCnt = 0;
 }
 
 int LogKV::put(const std::string &key, const std::string *val)
@@ -26,6 +27,7 @@ int LogKV::put(const std::string &key, const std::string *val)
     }
     else
     {
+        duplicatedEntryCnt++;
         Entry *oldEntry = it->second;
         if (oldEntry == NULL)
         {
@@ -35,6 +37,8 @@ int LogKV::put(const std::string &key, const std::string *val)
     }
 
     kvTable[key] = newEntry;
+
+    tryCompact();
     return 0;
 }
 
@@ -60,9 +64,12 @@ void LogKV::deleteK(const std::string &key)
         return;
     }
 
+    duplicatedEntryCnt++;
     log->append(-1, key, NULL);
     kvTable.erase(it);
     tableSize--;
+
+    tryCompact();
 }
 
 size_t LogKV::size()

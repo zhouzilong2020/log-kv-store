@@ -4,6 +4,11 @@
 
 #ifndef __UTIL_H__
 #define __UTIL_H__
+#include <dirent.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+
 #include <chrono>
 #include <string>
 
@@ -41,4 +46,5 @@ std::chrono::microseconds getOpTime();
 
 uint64_t getTS();
 
+void removeDir(const char *path);
 #endif

@@ -16,6 +16,10 @@ class LogKV : public KVStore
 {
    public:
     LogKV();
+    ~LogKV()
+    {
+        if (log) delete log;
+    };
 
     /**
      * This function replaus the disk log to reconstruct the
@@ -42,8 +46,6 @@ class LogKV : public KVStore
      */
     virtual void deleteK(const std::string &key) override;
 
-    ~LogKV() { delete log; };
-
     /**
      * size returns the current size of the kv
      * store, which equals to the number of keys
@@ -51,13 +53,33 @@ class LogKV : public KVStore
      */
     size_t size();
 
+    void tryCompact()
+    {
+        double currentUsg = double(log->currentChunkUsed()) /
+                            double(log->currentChunkCapacity());
+        if (duplicatedEntryCnt < (1 << 15) || currentUsg < 0.8)
+        {
+            return;
+        }
+        Log *compactedLog = new Log(&kvTable);
+
+        // make old persistent file hidden
+        log->hideFile();
+        // create new persistent file
+        compactedLog->persist();
+        log->removePersistedFile();
+        if (log) delete log;
+        log = compactedLog;
+        duplicatedEntryCnt = 0;
+    }
+
    private:
     // this map stores the current key-value table
     std::unordered_map<std::string, Entry *> kvTable;
     // data structure that maintains the log
     Log *log;
-
     size_t tableSize;
+    int duplicatedEntryCnt;
 };
 
 #endif
