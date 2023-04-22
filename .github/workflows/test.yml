@@ -17,6 +17,9 @@ jobs:
       - name: Run build in tests
         run: ./log_kv -T > output.txt 2>&1 || true
 
+      - name: cat result
+        run: cat output.txt
+
       - name: Upload test log
         uses: actions/upload-artifact@v2
         with:
