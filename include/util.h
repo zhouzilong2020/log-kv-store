@@ -4,6 +4,11 @@
 
 #ifndef __UTIL_H__
 #define __UTIL_H__
+#include <dirent.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+
 #include <chrono>
 #include <string>
 
@@ -55,5 +60,6 @@ void removeDir(const char *path);
  * existDir returns try if the given directory exists
 */
 bool existDir(const char *path);
+
 
 #endif

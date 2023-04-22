@@ -14,7 +14,7 @@
 extern std::chrono::time_point<std::chrono::high_resolution_clock> start =
     std::chrono::high_resolution_clock::now();
 
-void *setClock()
+void* setClock()
 {
     start = std::chrono::high_resolution_clock::now();
     return NULL;
@@ -66,6 +66,8 @@ void listDir(const char *path, std::vector<std::string> &files)
     }
 }
 
+
+/*
 void removeDir(const char *path)
 {
     struct stat buffer;
@@ -89,10 +91,58 @@ void removeDir(const char *path)
     }
     printf("\n\n");
 }
+*/
 
 bool existDir(const char *path)
 {
     struct stat buffer;
     if (stat(path, &buffer) == -1) return false;
     return true;
+}
+
+void removeDir(const char* path)
+{
+    DIR* dir = opendir(path);
+    struct dirent* entry;
+
+    while ((entry = readdir(dir)) != NULL)
+    {
+        const char* name = entry->d_name;
+
+        // Skip the "." and ".." entries
+        if (name[0] == '.' &&
+            (name[1] == '\0' || (name[1] == '.' && name[2] == '\0')))
+        {
+            continue;
+        }
+
+        char* sub_path = (char*)malloc(strlen(path) + strlen(name) + 2);
+        sprintf(sub_path, "%s/%s", path, name);
+
+        if (entry->d_type == DT_DIR)
+        {
+            // Recursive call to remove subdirectory
+            removeDir(sub_path);
+        }
+        else
+        {
+            // Remove regular file
+            if (remove(sub_path) != 0)
+            {
+                perror("Error deleting file");
+                exit(EXIT_FAILURE);
+            }
+        }
+
+        free(sub_path);
+    }
+
+    closedir(dir);
+
+    if (rmdir(path) != 0)
+    {
+        perror("Error deleting directory");
+        exit(EXIT_FAILURE);
+    }
+
 }

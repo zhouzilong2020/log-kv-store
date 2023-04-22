@@ -14,22 +14,12 @@ LogKV::LogKV()
 {
     log = new Log();
     tableSize = 0;
+    duplicatedEntryCnt = 0;
 }
 
 LogKV::~LogKV()
 {
     delete log;
-
-    if (existDir(PersistRoot.c_str()))
-    {
-        char cmd[10];
-        printf("%s", RemovePrompt);
-        fgets(cmd, sizeof(cmd), stdin);
-        if (strcmp(cmd, "YES\n") != 0) return;
-
-        // remove the persistence log when the table is destructed
-        removeDir(PersistRoot.c_str());
-    }
 }
 
 int LogKV::put(const std::string &key, const std::string *val)
@@ -43,6 +33,7 @@ int LogKV::put(const std::string &key, const std::string *val)
     }
     else
     {
+        duplicatedEntryCnt++;
         Entry *oldEntry = it->second;
         if (oldEntry == NULL)
         {
@@ -52,6 +43,8 @@ int LogKV::put(const std::string &key, const std::string *val)
     }
 
     kvTable[key] = newEntry;
+
+    tryCompact();
     return 0;
 }
 
@@ -77,9 +70,12 @@ void LogKV::deleteK(const std::string &key)
         return;
     }
 
+    duplicatedEntryCnt++;
     log->append(std::numeric_limits<uint16_t>::max(), key, NULL);
     kvTable.erase(it);
     tableSize--;
+
+    tryCompact();
 }
 
 size_t LogKV::size()

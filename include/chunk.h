@@ -52,6 +52,31 @@ class Chunk
 
     int getCapacity() { return capacity; };
 
+    int getSize() { return used; };
+
+    Entry *append(const Entry *entry)
+    {
+        const static int offset = offsetof(Entry, payload);
+        int entrySize = offset + entry->keySize + entry->valSize;
+        // check size, return false if there is not enough space
+        if (entrySize + used > capacity)
+        {
+            return NULL;
+        }
+
+        Entry *newEntry = (Entry *)next;
+        memcpy(next, entry, entrySize);
+
+        assert(entry->valSize == entry->valSize &&
+               entry->keySize == entry->keySize);
+        next += entrySize;
+        used += entrySize;
+        entryCnt++;
+        updatedTs = getTS();
+
+        return newEntry;
+    }
+
     // append appends the key-value pair to the chunk. It returns a pointer
     // points to the entry if success, NULL otherwise.
     Entry *append(const int version, const std::string &key,
@@ -76,7 +101,6 @@ class Chunk
         if (val)
             strlcpy((char *)&newEntry->payload + keySize, val->c_str(),
                     newEntry->valSize);
-        // head = (char *)head + entrySize;
 
         updatedTs = getTS();
         // commit point begin

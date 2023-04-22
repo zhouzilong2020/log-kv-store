@@ -58,15 +58,38 @@ class LogKV : public KVStore
      */
     size_t size();
 
+
     const std::vector<Chunk *> *getChunkList() { return log->getChunkList(); }
+
+    void tryCompact()
+    {
+        double currentUsg = double(log->currentChunkUsed()) /
+                            double(log->currentChunkCapacity());
+        if (duplicatedEntryCnt < (1 << 15) || currentUsg < 0.8)
+        {
+            return;
+        }
+        Log *compactedLog = new Log(&kvTable);
+
+        // make old persistent file hidden
+        log->hideFile();
+        // create new persistent file
+        compactedLog->persist();
+        log->removePersistedFile();
+        if (log) delete log;
+        log = compactedLog;
+        duplicatedEntryCnt = 0;
+    }
+
 
    private:
     // this map stores the current key-value table
     std::unordered_map<std::string, Entry *> kvTable;
     // data structure that maintains the log
     Log *log;
-
     size_t tableSize;
+    int duplicatedEntryCnt;
+
     const uint64_t RecoverBufSize = 512 * (1 << 20);  // 512Mb recover buf
 
     /**
@@ -109,6 +132,7 @@ class LogKV : public KVStore
             entryCnt++;
         }
     }
+
 };
 
 #endif
