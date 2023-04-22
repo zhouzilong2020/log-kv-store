@@ -20,7 +20,7 @@
 #include "../include/util.h"
 
 // TODO: make it configurable
-static std::string persistRoot = "./.persist";
+static std::string PersistRoot = "./.persist";
 
 // on disk meta info, one per persistent file
 struct MetaInfoPersistentFile
@@ -62,18 +62,9 @@ class Log
 {
    public:
     Log();
-
     Log(std::unordered_map<std::string, Entry *> *kvTable);
 
-    ~Log()
-    {
-        // FIXME:partial persist
-        // persist();
-        for (auto chunk : chunkList)
-        {
-            if (chunk) delete chunk;
-        }
-    }
+    ~Log();
 
     /**
      * This function append the key-value pair,
@@ -87,10 +78,14 @@ class Log
                   const std::string *val);
 
     /**
-     * This function load the log from the disk to recover
-     * the in-memory log, after a failure.
+     * This function sets the recover indicator
      */
-    void recover(std::unordered_map<std::string, Entry *> &kvTable) { return; };
+    void recover(bool recover) { recovering = recover; };
+
+    /**
+     * getChunkHead returns the chunkList vector
+     */
+    const std::vector<Chunk *> *getChunkList() { return &chunkList; }
 
     int chunkSize() { return chunkList.size(); };
 
@@ -114,10 +109,10 @@ class Log
                            // file
     int nextPersistChunk;  // nextPersistChunk points to the next log
                            // that needed to be persisted to disk
+    bool recovering;  // indicate that the logkv is replaying the previous log
 
-    const uint64_t ChunkSize = 1 << 22;               // 4Mb chunk size
-    const uint64_t FileSize = 1 << 31;                // 2Gb file size
-    const uint64_t RecoverBufSize = 512 * (1 << 10);  // 512Mb recover buf
+    const uint64_t ChunkSize = 1 << 21;  // 2Mb chunk size
+    const uint64_t FileSize = 1 << 31;   // 2Gb file size
 
     /*
      * expend allocates a new chunk of memory,  the log.
@@ -130,17 +125,12 @@ class Log
             printf("Log::expend: OOM failed to allocate new chunk\n");
             exit(1);
         }
+        // write back happens whenever a segment is filled
+        if (chunkList.size() != 0 && !recovering && doPersist) persist();
+
         chunkList.push_back(newChunk);
         head = newChunk;
-
-        // write back happens whenever a segment is filled
-        if (chunkList.size() != 1 && doPersist) persist();
     }
-
-    /*
-     * compact compacts the log, removing unnecessary entries.
-     */
-    int compact() { return 1; }
 
     /**
      * timerTrigger triggers the disk write periodically, even if the log

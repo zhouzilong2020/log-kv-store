@@ -4,12 +4,20 @@
 
 #include "../include/util.h"
 
+#include <dirent.h>
+#include <sys/stat.h>
+#include <unistd.h>
+
+// #include <string>
+#include <vector>
+
 extern std::chrono::time_point<std::chrono::high_resolution_clock> start =
     std::chrono::high_resolution_clock::now();
 
-void* setClock()
+void *setClock()
 {
     start = std::chrono::high_resolution_clock::now();
+    return NULL;
 }
 
 std::chrono::microseconds getOpTime()
@@ -28,14 +36,77 @@ uint64_t getTS()
         .count();
 }
 
-void removeDir(const char* path)
+void listDir(const char *path, std::vector<std::string> &files)
 {
-    DIR* dir = opendir(path);
-    struct dirent* entry;
+    DIR *dr;
+    struct dirent *it;
+
+    std::vector<std::pair<int, std::string>> filenames;
+
+    // gather all files to be read
+    dr = opendir(path);
+    if (dr)
+    {
+        while ((it = readdir(dr)) != NULL)
+        {
+            // printf("%s\n", it->d_name);
+            filenames.push_back(
+                std::pair<int, std::string>(it->d_namlen, it->d_name));
+        }
+        // sort it in log file generation order
+        std::sort(filenames.begin(), filenames.end());
+    }
+    else
+        printf("Error: %s not found\n", path);
+
+    for (auto &i : filenames)
+    {
+        if (i.second != "." && i.second != "..")
+            files.push_back(std::string(path) + "/" + i.second);
+    }
+}
+
+/*
+void removeDir(const char *path)
+{
+    struct stat buffer;
+    if (stat(path, &buffer) == 0)
+    {
+        std::vector<std::string> files;
+        listDir(path, files);
+
+        for (auto &filep : files)
+        {
+            printf("Removing %s\n", filep.c_str());
+            if (remove(filep.c_str()) != 0)
+            {
+                printf("Error: remove %s failed\n", filep.c_str());
+            }
+        }
+        if (rmdir(path) == -1)
+        {
+            printf("Error: remove %s failed\n", path);
+        }
+    }
+    printf("\n\n");
+}
+*/
+
+bool existDir(const char *path)
+{
+    struct stat buffer;
+    if (stat(path, &buffer) == -1) return false;
+    return true;
+}
+
+void removeDir(const char *path)
+{
+    DIR *dir = opendir(path);
+    struct dirent *entry;
 
     while ((entry = readdir(dir)) != NULL)
     {
-        const char* name = entry->d_name;
+        const char *name = entry->d_name;
 
         // Skip the "." and ".." entries
         if (name[0] == '.' &&
@@ -44,7 +115,7 @@ void removeDir(const char* path)
             continue;
         }
 
-        char* sub_path = (char*)malloc(strlen(path) + strlen(name) + 2);
+        char *sub_path = (char *)malloc(strlen(path) + strlen(name) + 2);
         sprintf(sub_path, "%s/%s", path, name);
 
         if (entry->d_type == DT_DIR)

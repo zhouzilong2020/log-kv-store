@@ -1,5 +1,5 @@
 .vscode/
 build
 log_kv
+.persist/
 .DS_Store
-.persist

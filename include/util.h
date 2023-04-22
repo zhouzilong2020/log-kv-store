@@ -46,5 +46,20 @@ std::chrono::microseconds getOpTime();
 
 uint64_t getTS();
 
+/**
+ * listDir lists all files within the given directory path
+ */
+void listDir(const char *path, std::vector<std::string> &files);
+
+/**
+ * removeDir remove the given directory
+ */
 void removeDir(const char *path);
+
+/**
+ * existDir returns try if the given directory exists
+*/
+bool existDir(const char *path);
+
+
 #endif

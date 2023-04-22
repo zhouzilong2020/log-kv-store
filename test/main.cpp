@@ -15,7 +15,7 @@ std::string randomString(uint strLen)
     std::string str;
     str.reserve((size_t)strLen);
 
-    for (uint i = 0; i < strLen; i++)
+    for (int i = 0; i < static_cast<int>(strLen); i++)
     {
         char charASCII = 'a' + arc4random() % 26;
         str.push_back(charASCII);
@@ -41,6 +41,94 @@ bool cmpTables(LogKV &logKV, std::unordered_map<std::string, std::string> &map)
         }
         cnt++;
     }
+    return true;
+}
+
+bool cmpLogKVs(LogKV &refLogKV, LogKV &newLogKV)
+{
+    const std::vector<Chunk *> *refChunkVec = refLogKV.getChunkList();
+    const std::vector<Chunk *> *newChunkVec = newLogKV.getChunkList();
+    Chunk *refChunk;
+    Chunk *newChunk;
+    char *refHead;
+    char *newHead;
+    Entry *refEntry;
+    Entry *newEntry;
+    uint64_t entryOffset;
+
+    const static uint64_t payloadOffset = offsetof(Entry, payload);
+
+    // newChunkVec->size() because the newest chunk in previous log might be
+    // lost
+    for (int i = 0; i < static_cast<int>(newChunkVec->size()); i++)
+    {
+        refChunk = (*refChunkVec)[i];
+        newChunk = (*newChunkVec)[i];
+        if (refChunk->get(CAPACITY) != newChunk->get(CAPACITY) ||
+            refChunk->get(USED) != newChunk->get(USED) ||
+            refChunk->get(ENTRYCNT) != newChunk->get(ENTRYCNT))
+        {
+            printf("Error: chunk %d meta unmatch\n", i);
+            printf("CAPACITY: %d %d\n", refChunk->get(CAPACITY),
+                   newChunk->get(CAPACITY));
+            printf("USED: %d %d\n", refChunk->get(USED), newChunk->get(USED));
+            printf("ENTRYCNT: %d %d\n", refChunk->get(ENTRYCNT),
+                   newChunk->get(ENTRYCNT));
+            exit(1);
+        }
+
+        refHead = refChunk->getHead();
+        newHead = newChunk->getHead();
+        entryOffset = 0;
+
+        for (int cnt = 0; cnt < refChunk->get(ENTRYCNT); cnt++)
+        {
+            refEntry = (Entry *)(refHead + entryOffset);
+            newEntry = (Entry *)(newHead + entryOffset);
+
+            if (refEntry->version != newEntry->version ||
+                refEntry->keySize != newEntry->keySize ||
+                refEntry->valSize != newEntry->valSize ||
+                strcmp((char *)&refEntry->payload,
+                       (char *)&newEntry->payload) != 0 ||
+                strcmp((char *)&refEntry->payload + refEntry->keySize,
+                       (char *)&newEntry->payload + newEntry->keySize) != 0)
+            {
+                printf("Error: chunk %d entry %d\n", i, cnt);
+                printf("Entry num %d\n", cnt);
+                printf("version: %d %d\n", refEntry->version,
+                       newEntry->version);
+                assert(refEntry->version == newEntry->version);
+
+                printf("keySize: %d %d\n", refEntry->keySize,
+                       newEntry->keySize);
+                assert(refEntry->keySize == newEntry->keySize);
+
+                printf("valSize: %d %d\n", refEntry->valSize,
+                       newEntry->valSize);
+                assert(refEntry->valSize == newEntry->valSize);
+
+                printf("key: %s %s\n", (char *)&refEntry->payload,
+                       (char *)&newEntry->payload);
+                printf("key length: %lu %lu\n",
+                       strlen((char *)&refEntry->payload),
+                       strlen((char *)&newEntry->payload));
+                assert(strcmp((char *)&refEntry->payload,
+                              (char *)&newEntry->payload));
+
+                printf("val: %s %s\n",
+                       (char *)&refEntry->payload + refEntry->keySize,
+                       (char *)&newEntry->payload + newEntry->keySize);
+                assert(strcmp((char *)&refEntry->payload + refEntry->keySize,
+                              (char *)&newEntry->payload + newEntry->keySize));
+                exit(1);
+            }
+
+            entryOffset +=
+                payloadOffset + refEntry->keySize + refEntry->valSize;
+        }
+    }
+
     return true;
 }
 
@@ -180,6 +268,56 @@ void testBigKV()
     printf("Succeed!\n");
 }
 
+void testRecoverDbg()
+{
+    printf("testing testRecoverDbg\n");
+
+    LogKV logKV;
+    std::unordered_map<std::string, std::string> map;
+    std::string key;
+    std::string val;
+
+    for (int i = 0; i < (1 << 18); i++)
+    {
+        key = std::string("key") + std::to_string(i);
+        val = std::string("value") + std::to_string(i);
+        map[key] = val;
+        logKV.put(key, &val);
+    }
+    cmpTables(logKV, map);
+
+    LogKV newLogKV;
+    newLogKV.recover();
+
+    cmpLogKVs(logKV, newLogKV);
+    printf("Succeed!\n");
+}
+
+void testRecoverBig()
+{
+    printf("testing testRecoverBig\n");
+
+    LogKV logKV;
+    std::unordered_map<std::string, std::string> map;
+    std::string key;
+    std::string val;
+
+    for (int i = 0; i < (1 << 18); i++)
+    {
+        std::string key = randomString(20);
+        std::string val = randomString(50);
+        map[key] = val;
+        logKV.put(key, &val);
+    }
+    cmpTables(logKV, map);
+
+    LogKV newLogKV;
+    newLogKV.recover();
+
+    cmpLogKVs(logKV, newLogKV);
+    printf("Succeed!\n");
+}
+
 void testPersist()
 {
     printf("testing testPersist\n");
@@ -197,12 +335,13 @@ void testPersist()
     }
 
     assert(cmpTables(logKV, map));
-
     printf("Succeed!\n");
 }
 
 void runTest()
 {
+    if (existDir(".persist")) removeDir(".persist");
+
     testBasicGetPut();
     removeDir(".persist");
 
@@ -213,6 +352,12 @@ void runTest()
     removeDir(".persist");
 
     testBigKV();
+    removeDir(".persist");
+
+    testRecoverDbg();
+    removeDir(".persist");
+
+    testRecoverBig();
     removeDir(".persist");
 
     testPersist();

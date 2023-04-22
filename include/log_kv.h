@@ -16,10 +16,7 @@ class LogKV : public KVStore
 {
    public:
     LogKV();
-    ~LogKV()
-    {
-        if (log) delete log;
-    };
+    ~LogKV();
 
     /**
      * This function replaus the disk log to reconstruct the
@@ -53,6 +50,8 @@ class LogKV : public KVStore
      */
     size_t size();
 
+    const std::vector<Chunk *> *getChunkList() { return log->getChunkList(); }
+
     void tryCompact()
     {
         double currentUsg = double(log->currentChunkUsed()) /
@@ -80,6 +79,49 @@ class LogKV : public KVStore
     Log *log;
     size_t tableSize;
     int duplicatedEntryCnt;
+
+    const uint64_t RecoverBufSize = 512 * (1 << 20);  // 512Mb recover buf
+
+    /**
+     * replayEntry replays the given log slice
+     */
+    void replayChunk(Chunk *chunk, char *chunkPayload)
+    {
+        const static int payloadOffset = offsetof(Entry, payload);
+        Entry *logEntry;
+        uint64_t entryOffset = 0;
+        std::string key;
+        std::string val;
+        int entryCnt = 0;
+
+        while (entryCnt < chunk->get(ENTRYCNT))
+        {
+            /** TODO: is copy one-by-one a good idea?  */
+            // printf("entryOffset %lld\n", entryOffset);
+            logEntry = (Entry *)(chunkPayload + entryOffset);
+            // if (entryCnt == 0)
+            //     printf("Recover Entry info %d %d %d | %s <-> %s\n",
+            //            logEntry->version, logEntry->keySize,
+            //            logEntry->valSize, (char *)&logEntry->payload, (char
+            //            *)&logEntry->payload + logEntry->keySize);
+
+            key = std::string((char *)&logEntry->payload);
+            val = std::string((char *)&logEntry->payload + logEntry->keySize);
+
+            if (logEntry->version == std::numeric_limits<uint16_t>::max())
+            {
+                deleteK(key);
+            }
+            else
+            {
+                put(key, &val);
+            }
+
+            entryOffset +=
+                payloadOffset + logEntry->keySize + logEntry->valSize;
+            entryCnt++;
+        }
+    }
 };
 
 #endif
