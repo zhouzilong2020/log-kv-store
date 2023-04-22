@@ -3,6 +3,8 @@
 #include <stddef.h>
 #include <util.h>
 
+#include <cstring>
+
 /**
  * Entry is the basic key value pair.
  */
@@ -65,9 +67,6 @@ class Chunk
 
         Entry *newEntry = (Entry *)next;
         memcpy(next, entry, entrySize);
-
-        assert(entry->valSize == entry->valSize &&
-               entry->keySize == entry->keySize);
         next += entrySize;
         used += entrySize;
         entryCnt++;
@@ -96,9 +95,9 @@ class Chunk
         newEntry->version = version;
         newEntry->keySize = keySize;
         newEntry->valSize = valSize;
-        strlcpy((char *)&newEntry->payload, key.c_str(), newEntry->keySize);
+        strncpy((char *)&newEntry->payload, key.c_str(), newEntry->keySize);
         if (val)
-            strlcpy((char *)&newEntry->payload + keySize, val->c_str(),
+            strncpy((char *)&newEntry->payload + keySize, val->c_str(),
                     newEntry->valSize);
 
         updatedTs = getTS();
@@ -126,6 +125,7 @@ class Chunk
         case ENTRYCNT:
             return entryCnt;
         }
+        return -1;
     }
 
    private:

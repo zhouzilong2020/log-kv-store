@@ -1,0 +1,42 @@
+name: Build and Test Executable
+
+on: pull_request
+
+jobs:
+  build-and-test:
+    runs-on: macos-10.15
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - name: Build executable
+        run: make
+
+      - name: Run build in tests
+        run: ./log_kv -T > output.txt 2>&1 || true
+
+      - name: Upload test log
+        uses: actions/upload-artifact@v2
+        with:
+          name: Test Output
+          path: output.txt
+
+      - name: Check output
+        run: |
+          output=$(cat output.txt)
+          last_line=$(echo "$output" | tail -n1)
+          if [[ "$last_line" == "ALL TEST PASSED" ]]; then
+            echo "Tests passed"
+          else
+            echo "Tests failed"
+            exit 1
+          fi
+
+      - name: Block pull request if tests fail
+        if: ${{ failure() }}
+        uses: peter-evans/create-or-update-comment@v3
+        with:
+          issue-number: 1
+          body-path: "output.txt"
