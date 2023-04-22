@@ -362,6 +362,8 @@ void runTest()
 
     testPersist();
     removeDir(".persist");
+
+    printf("ALL TEST PASSED\n");
 }
 
 static struct option long_options[] = {
