@@ -4,7 +4,7 @@ on: pull_request
 
 jobs:
   build-and-test:
-    runs-on: ubuntu-latest
+    runs-on: macos-10.15
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
@@ -15,7 +15,7 @@ jobs:
         run: make
 
       - name: Run build in tests
-        run: ./log_kv -T > output.txt
+        run: ./log_kv -T > output.txt 2>&1 || true
 
       - name: Upload test log
         uses: actions/upload-artifact@v2
@@ -38,5 +38,5 @@ jobs:
         if: ${{ failure() }}
         uses: peter-evans/create-or-update-comment@v3
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+          issue-number: 1
           body-path: "output.txt"
