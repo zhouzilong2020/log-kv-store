@@ -34,6 +34,8 @@ Log::Log(std::unordered_map<std::string, Entry *> *kvTable)
         }
         kv.second = newEntry;
     }
+
+    recovering = false;
     // persist();
 }
 
@@ -60,7 +62,7 @@ Log::~Log()
     // persist();
     for (auto chunk : chunkList)
     {
-        delete chunk;
+        if (chunk) delete chunk;
     }
 }
 
@@ -74,10 +76,8 @@ Entry *Log::append(const int version, const std::string &key,
         // this time it should work
         entryPtr = head->append(version, key, val);
     }
-
     return entryPtr;
 }
-
 
 /*
  * persist writes the current log to the disk.
@@ -85,7 +85,7 @@ Entry *Log::append(const int version, const std::string &key,
 int Log::persist()
 {
     std::string filename =
-        persistRoot + "/log-" + std::to_string(currentFileId);
+        PersistRoot + "/log-" + std::to_string(currentFileId);
     MetaInfoPersistentFile *fileMeta = NULL;
     // create if not exist, otherwise open
     std::fstream fp;
@@ -102,19 +102,26 @@ int Log::persist()
         fileMeta = persistentFileTable[filename];
     }
     fp.close();
+    // printf("Persist file header %llu %llu %llu %llu\n", fileMeta->createdTs,
+    //        fileMeta->updatedTs, fileMeta->chunkCnt, fileMeta->tail);
 
     fp.open(filename);
-    fp.seekg(0, std::ios::beg);
-    fp.read((char *)fileMeta, sizeof(MetaInfoPersistentFile));
+    // fp.seekg(0, std::ios::beg);
+    // fp.read((char *)fileMeta, sizeof(MetaInfoPersistentFile));
     // write ahead
     fp.seekp(0, std::ios::end);
     fp.write((char *)head, sizeof(Chunk));
     fp.write(head->getHead(), head->getCapacity());
+    // printf(
+    //     "Persist chunk info %d %d %d %d %d | payload offset"
+    //     "%p\n",
+    //     head->get(CREATEDTS), head->get(UPDATEDTS), head->get(ENTRYCNT),
+    //     head->get(CAPACITY), head->get(USED), head->getHead());
 
     fileMeta->addChunk(ChunkSize);
     fp.seekp(0, std::ios::beg);
     // commit begins
-    fp.write((char *)&fileMeta, sizeof(MetaInfoPersistentFile));
+    fp.write((char *)fileMeta, sizeof(MetaInfoPersistentFile));
     fp.close();
     // commit ends
 

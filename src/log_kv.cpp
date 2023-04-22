@@ -19,7 +19,7 @@ LogKV::LogKV()
 
 LogKV::~LogKV()
 {
-    delete log;
+    if (log) delete log;
 }
 
 int LogKV::put(const std::string &key, const std::string *val)
@@ -91,7 +91,7 @@ int LogKV::recover()
     listDir(PersistRoot.c_str(), files);
 
     std::fstream fp;
-    PersistentMetaInfoFile fileMeta;
+    MetaInfoPersistentFile fileMeta;
     char *logBuf =
         (char *)malloc(RecoverBufSize);  // 512Mb buffer for log replay
 
@@ -107,7 +107,7 @@ int LogKV::recover()
         fp.open(path, std::ios::binary | std::ios::in);
         fp.seekg(0, std::ios::beg);
         // read te file meta
-        fp.read((char *)&fileMeta, sizeof(PersistentMetaInfoFile));
+        fp.read((char *)&fileMeta, sizeof(MetaInfoPersistentFile));
         // printf("Recovery file header %llu %llu %llu %llu\n",
         // fileMeta.createdTs,
         //        fileMeta.updatedTs, fileMeta.chunkCnt, fileMeta.tail);
@@ -145,18 +145,9 @@ int LogKV::recover()
                 chunkCnt++;
             }
         }
+        fp.close();
     }
-
+    free(logBuf);
     log->recover(false);
     return 0;
-}
-
-void LogKV::failure()
-{
-    kvTable.clear();
-    delete log;
-    log = new Log;
-
-    // clear out the table size
-    tableSize = 0;
 }

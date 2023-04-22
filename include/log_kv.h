@@ -12,9 +12,6 @@
 
 #include "kv_store.h"
 
-const static char *RemovePrompt =
-    "\n### Do you want to remove persist logs? (YES/ANYTHING) >>> ";
-
 class LogKV : public KVStore
 {
    public:
@@ -26,11 +23,6 @@ class LogKV : public KVStore
      * key-value table, after a failure.
      */
     int recover();
-
-    /**
-     * failure simulates a machine failure by
-     */
-    void failure();
 
     /**
      * Client can use <code>put</code> to update
@@ -58,7 +50,6 @@ class LogKV : public KVStore
      */
     size_t size();
 
-
     const std::vector<Chunk *> *getChunkList() { return log->getChunkList(); }
 
     void tryCompact()
@@ -80,7 +71,6 @@ class LogKV : public KVStore
         log = compactedLog;
         duplicatedEntryCnt = 0;
     }
-
 
    private:
     // this map stores the current key-value table
@@ -132,7 +122,6 @@ class LogKV : public KVStore
             entryCnt++;
         }
     }
-
 };
 
 #endif

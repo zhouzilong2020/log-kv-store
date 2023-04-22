@@ -1,12 +1,11 @@
 CXX = g++
-CXXFLAGS = -g -Wall -Wextra -pedantic -O2 -std=c++11
+CXXFLAGS = -g -Wall -Wextra -O3 -std=c++11
 LDFLAGS = -Wl
 
 INCLUDE_DIR = include
 SRC_DIR = src
 BUILD_DIR = build
 TEST_DIR = test
-LOG_PERSIST = .persist
 
 SRCS = $(wildcard $(SRC_DIR)/*.cpp)
 OBJS = $(patsubst $(SRC_DIR)/%.cpp,$(BUILD_DIR)/%.o,$(SRCS))

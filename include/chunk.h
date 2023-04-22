@@ -23,7 +23,6 @@ enum chunkMeta
     ENTRYCNT
 };
 
-
 /**
  * Chunk is the smallest unit of memory allocation. It is managed by Log.
  */
@@ -138,6 +137,5 @@ class Chunk
     char *head;
     char *next;
 };
-
 
 #endif

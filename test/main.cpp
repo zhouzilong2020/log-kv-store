@@ -68,6 +68,7 @@ bool cmpLogKVs(LogKV &refLogKV, LogKV &newLogKV)
             refChunk->get(USED) != newChunk->get(USED) ||
             refChunk->get(ENTRYCNT) != newChunk->get(ENTRYCNT))
         {
+            printf("Error: chunk %d meta unmatch\n", i);
             printf("CAPACITY: %d %d\n", refChunk->get(CAPACITY),
                    newChunk->get(CAPACITY));
             printf("USED: %d %d\n", refChunk->get(USED), newChunk->get(USED));
@@ -93,6 +94,7 @@ bool cmpLogKVs(LogKV &refLogKV, LogKV &newLogKV)
                 strcmp((char *)&refEntry->payload + refEntry->keySize,
                        (char *)&newEntry->payload + newEntry->keySize) != 0)
             {
+                printf("Error: chunk %d entry %d\n", i, cnt);
                 printf("Entry num %d\n", cnt);
                 printf("version: %d %d\n", refEntry->version,
                        newEntry->version);
@@ -266,7 +268,6 @@ void testBigKV()
     printf("Succeed!\n");
 }
 
-
 void testRecoverDbg()
 {
     printf("testing testRecoverDbg\n");
@@ -339,6 +340,8 @@ void testPersist()
 
 void runTest()
 {
+    if (existDir(".persist")) removeDir(".persist");
+
     testBasicGetPut();
     removeDir(".persist");
 
@@ -350,10 +353,10 @@ void runTest()
 
     testBigKV();
     removeDir(".persist");
-    
+
     testRecoverDbg();
     removeDir(".persist");
-    
+
     testRecoverBig();
     removeDir(".persist");
 

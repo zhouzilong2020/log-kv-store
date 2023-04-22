@@ -20,7 +20,7 @@
 #include "../include/util.h"
 
 // TODO: make it configurable
-static std::string PersistRoot = "../.persist";
+static std::string PersistRoot = "./.persist";
 
 // on disk meta info, one per persistent file
 struct MetaInfoPersistentFile
@@ -63,9 +63,9 @@ class Log
    public:
     Log();
     Log(std::unordered_map<std::string, Entry *> *kvTable);
-    
+
     ~Log();
-    
+
     /**
      * This function append the key-value pair,
      * together with the version number of the event
@@ -126,16 +126,11 @@ class Log
             exit(1);
         }
         // write back happens whenever a segment is filled
-        if (chunkList.size() != 0) persist();
+        if (chunkList.size() != 0 && !recovering && doPersist) persist();
 
         chunkList.push_back(newChunk);
         head = newChunk;
     }
-
-    /*
-     * compact compacts the log, removing unnecessary entries.
-     */
-    int compact() { return 1; }
 
     /**
      * timerTrigger triggers the disk write periodically, even if the log
