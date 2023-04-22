@@ -22,7 +22,7 @@ LogKV::~LogKV()
     if (log) delete log;
 }
 
-int LogKV::put(const std::string &key, const std::string *val)
+void LogKV::put(const std::string &key, const std::string *val)
 {
     auto it = kvTable.find(key);
     Entry *newEntry;
@@ -37,7 +37,7 @@ int LogKV::put(const std::string &key, const std::string *val)
         Entry *oldEntry = it->second;
         if (oldEntry == NULL)
         {
-            return -1;
+            return;
         }
         newEntry = log->append(oldEntry->version + 1, key, val);
     }
@@ -45,7 +45,6 @@ int LogKV::put(const std::string &key, const std::string *val)
     kvTable[key] = newEntry;
 
     tryCompact();
-    return 0;
 }
 
 std::unique_ptr<std::string> LogKV::get(const std::string &key)

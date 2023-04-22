@@ -49,7 +49,7 @@ class KVStore
     virtual ~KVStore(){};
     // put creates or updates a key-value pair in the table. val is nullable so
     // we use pointer here.
-    virtual int put(const std::string &key, const std::string *val) = 0;
+    virtual void put(const std::string &key, const std::string *val) = 0;
     // get gets the corresponding value to the given key, return NULL otherwise.
     virtual std::unique_ptr<std::string> get(const std::string &key) = 0;
     // deleteK deletes the key-value pair from the table.
