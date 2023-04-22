@@ -361,6 +361,8 @@ void runTest()
     testRecoverBig();
     removeDir(".persist");
 
+    exit(1);
+
     testPersist();
     removeDir(".persist");
 
