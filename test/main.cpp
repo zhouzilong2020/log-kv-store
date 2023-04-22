@@ -65,16 +65,16 @@ bool cmpLogKVs(LogKV &refLogKV, LogKV &newLogKV)
     {
         refChunk = (*refChunkVec)[i];
         newChunk = (*newChunkVec)[i];
-        if (refChunk->get(CAPACITY) != newChunk->get(CAPACITY) ||
-            refChunk->get(USED) != newChunk->get(USED) ||
-            refChunk->get(ENTRYCNT) != newChunk->get(ENTRYCNT))
+        if (refChunk->getCapacity() != newChunk->getCapacity() ||
+            refChunk->getEntryCnt() != newChunk->getEntryCnt() ||
+            refChunk->getUsed() != newChunk->getUsed())
         {
-            printf("Error: chunk %d meta unmatch\n", i);
-            printf("CAPACITY: %d %d\n", refChunk->get(CAPACITY),
-                   newChunk->get(CAPACITY));
-            printf("USED: %d %d\n", refChunk->get(USED), newChunk->get(USED));
-            printf("ENTRYCNT: %d %d\n", refChunk->get(ENTRYCNT),
-                   newChunk->get(ENTRYCNT));
+            printf("Error: chunk %d meta does not match\n", i);
+            printf("CAPACITY: %d %d\n", refChunk->getCapacity(),
+                   newChunk->getCapacity());
+            printf("USED: %d %d\n", refChunk->getUsed(), newChunk->getUsed());
+            printf("ENTRYCNT: %d %d\n", refChunk->getEntryCnt(),
+                   newChunk->getEntryCnt());
             exit(1);
         }
 
@@ -82,7 +82,7 @@ bool cmpLogKVs(LogKV &refLogKV, LogKV &newLogKV)
         newHead = newChunk->getHead();
         entryOffset = 0;
 
-        for (int cnt = 0; cnt < refChunk->get(ENTRYCNT); cnt++)
+        for (int cnt = 0; cnt < refChunk->getEntryCnt(); cnt++)
         {
             refEntry = (Entry *)(refHead + entryOffset);
             newEntry = (Entry *)(newHead + entryOffset);

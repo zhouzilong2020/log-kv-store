@@ -62,29 +62,17 @@ class Log
 {
    public:
     Log();
+    ~Log();
     Log(std::unordered_map<std::string, Entry *> *kvTable);
 
-    ~Log();
-
-    /**
-     * This function append the key-value pair,
-     * together with the version number of the event
-     * into the log.
-     *
-     * Note that a -1 version number stands for a deletion.
-     * val is nullable so we use pointer here.
-     */
+    int persist();
+    // append appends the key-value pair and their version number into the log
     Entry *append(const int version, const std::string &key,
                   const std::string *val);
 
-    /**
-     * This function sets the recover indicator
-     */
-    void recover(bool recover) { recovering = recover; };
+    void setRecover(bool recover) { recovering = recover; };
 
-    /**
-     * getChunkHead returns the chunkList vector
-     */
+    // getChunkHead returns the chunkList vector
     const std::vector<Chunk *> *getChunkList() { return &chunkList; }
 
     int chunkSize() { return chunkList.size(); };
@@ -92,8 +80,6 @@ class Log
     int currentChunkUsed() { return head->getCapacity(); };
 
     int currentChunkCapacity() { return chunkList.size(); };
-
-    int persist();
 
     void hideFile();
 
@@ -114,9 +100,7 @@ class Log
     const uint64_t ChunkSize = 1 << 21;  // 2Mb chunk size
     const uint64_t FileSize = 1 << 31;   // 2Gb file size
 
-    /*
-     * expend allocates a new chunk of memory,  the log.
-     */
+    // expend allocates a new chunk of memory
     void expend(bool doPersist = true)
     {
         Chunk *newChunk = new Chunk(ChunkSize);
@@ -130,16 +114,6 @@ class Log
 
         chunkList.push_back(newChunk);
         head = newChunk;
-    }
-
-    /**
-     * timerTrigger triggers the disk write periodically, even if the log
-     * capacity is not reached
-     */
-    int timerTrigger()
-    {
-        // TODO
-        return 1;
     }
 };
 

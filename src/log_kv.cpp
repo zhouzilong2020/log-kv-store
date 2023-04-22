@@ -22,7 +22,7 @@ LogKV::~LogKV()
     if (log) delete log;
 }
 
-int LogKV::put(const std::string &key, const std::string *val)
+void LogKV::put(const std::string &key, const std::string *val)
 {
     auto it = kvTable.find(key);
     Entry *newEntry;
@@ -37,7 +37,7 @@ int LogKV::put(const std::string &key, const std::string *val)
         Entry *oldEntry = it->second;
         if (oldEntry == NULL)
         {
-            return -1;
+            return;
         }
         newEntry = log->append(oldEntry->version + 1, key, val);
     }
@@ -45,7 +45,6 @@ int LogKV::put(const std::string &key, const std::string *val)
     kvTable[key] = newEntry;
 
     tryCompact();
-    return 0;
 }
 
 std::unique_ptr<std::string> LogKV::get(const std::string &key)
@@ -83,9 +82,9 @@ size_t LogKV::size()
     return tableSize;
 }
 
-int LogKV::recover()
+void LogKV::recover()
 {
-    log->recover(true);
+    log->setRecover(true);
 
     std::vector<std::string> files;
     listDir(PersistRoot.c_str(), files);
@@ -103,43 +102,24 @@ int LogKV::recover()
     // read through all files
     for (auto &path : files)
     {
-        // printf("\nStart Recovery: %llu %s\n", RecoverBufSize, path.c_str());
         fp.open(path, std::ios::binary | std::ios::in);
         fp.seekg(0, std::ios::beg);
         // read te file meta
         fp.read((char *)&fileMeta, sizeof(MetaInfoPersistentFile));
-        // printf("Recovery file header %llu %llu %llu %llu\n",
-        // fileMeta.createdTs,
-        //        fileMeta.updatedTs, fileMeta.chunkCnt, fileMeta.tail);
-
         while (!fp.eof())
         {
             // read the 512Mb log to parse each I/O
             fp.read((char *)logBuf, RecoverBufSize);
-
             // replay the log in terms of chunk objects
             chunkOffset = 0;
             chunkCnt = 0;
             while (chunkOffset < RecoverBufSize && chunkCnt < fileMeta.chunkCnt)
             {
-                // printf("\nchunkOffset %llu chunkCnt %llu\n", chunkOffset,
-                //        chunkCnt);
-
                 // get chunk meta and payload
                 chunk = (Chunk *)(logBuf + chunkOffset);
                 chunkPayload = logBuf + chunkOffset + sizeof(Chunk);
-                // if (chunkCnt == 0 || chunkCnt == 1 || chunkCnt == 2)
-                //     printf(
-                //         "Recovery chunk info %d %d %d %d %d | payload offset
-                //         "
-                //         "%llu\n",
-                //         chunk->get(CREATEDTS), chunk->get(UPDATEDTS),
-                //         chunk->get(ENTRYCNT), chunk->get(CAPACITY),
-                //         chunk->get(USED), chunkOffset + sizeof(Chunk));
-
                 // replay the entries in the current chunk
                 replayChunk(chunk, chunkPayload);
-
                 // go to the next chunk in this 512Mb log slice
                 chunkOffset += sizeof(Chunk) + chunk->getCapacity();
                 chunkCnt++;
@@ -148,6 +128,10 @@ int LogKV::recover()
         fp.close();
     }
     free(logBuf);
-    log->recover(false);
-    return 0;
+    log->setRecover(false);
+}
+
+void LogKV::persist()
+{
+    this->log->persist();
 }

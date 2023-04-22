@@ -101,22 +101,13 @@ int Log::persist()
     {
         fileMeta = persistentFileTable[filename];
     }
-    fp.close();
-    // printf("Persist file header %llu %llu %llu %llu\n", fileMeta->createdTs,
-    //        fileMeta->updatedTs, fileMeta->chunkCnt, fileMeta->tail);
 
+    fp.close();
     fp.open(filename);
-    // fp.seekg(0, std::ios::beg);
-    // fp.read((char *)fileMeta, sizeof(MetaInfoPersistentFile));
     // write ahead
     fp.seekp(0, std::ios::end);
     fp.write((char *)head, sizeof(Chunk));
     fp.write(head->getHead(), head->getCapacity());
-    // printf(
-    //     "Persist chunk info %d %d %d %d %d | payload offset"
-    //     "%p\n",
-    //     head->get(CREATEDTS), head->get(UPDATEDTS), head->get(ENTRYCNT),
-    //     head->get(CAPACITY), head->get(USED), head->getHead());
 
     fileMeta->addChunk(ChunkSize);
     fp.seekp(0, std::ios::beg);
