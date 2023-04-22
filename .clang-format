@@ -18,13 +18,15 @@ Language:      Cpp
 # Inherit our style from LLVM
 BasedOnStyle:  Google
 
-# Use 4 spaces as our indent width
-IndentWidth:   4
-
-# Reformat lines to be under 80 characters
 ColumnLimit:   80
-
-# Do not allow single-line functions (unless empty)
-AllowShortFunctionsOnASingleLine: Empty
+IndentWidth: 4
+UseTab: Never
+TabWidth: 4
+AllowShortFunctionsOnASingleLine: InlineOnly
+AlignTrailingComments: true
+BreakBeforeBraces: Allman
+IndentCaseLabels: false
+NamespaceIndentation: All
+SpacesInAngles: false
 
 ---

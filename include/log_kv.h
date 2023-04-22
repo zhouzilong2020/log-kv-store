@@ -10,37 +10,80 @@
 #include <string>
 #include <unordered_map>
 
-class log_kv {
+#include "kv_store.h"
+
+class LogKV : public KVStore
+{
+   public:
+    LogKV();
+    ~LogKV();
+    virtual void put(const std::string &key, const std::string *val) override;
+    virtual std::unique_ptr<std::string> get(const std::string &key) override;
+    virtual void deleteK(const std::string &key) override;
+    virtual void persist() override;
+    virtual void recover() override;
+
+    // size returns the current size of the kv store, which equals to the number
+    // of keys currently in the table
+    size_t size();
+
+    const std::vector<Chunk *> *getChunkList() { return log->getChunkList(); }
+
+    void tryCompact()
+    {
+        double currentUsg = double(log->currentChunkUsed()) /
+                            double(log->currentChunkCapacity());
+        if (duplicatedEntryCnt < (1 << 15) || currentUsg < 0.8)
+        {
+            return;
+        }
+        Log *compactedLog = new Log(&kvTable);
+
+        // make old persistent file hidden
+        log->hideFile();
+        // create new persistent file
+        compactedLog->persist();
+        log->removePersistedFile();
+        if (log) delete log;
+        log = compactedLog;
+        duplicatedEntryCnt = 0;
+    }
+
    private:
     // this map stores the current key-value table
-    std::unordered_map<std::string, std::string> kv_table;
+    std::unordered_map<std::string, Entry *> kvTable;
     // data structure that maintains the log
-    my_log kv_log;
+    Log *log;
+    size_t tableSize;
+    int duplicatedEntryCnt;
 
-   public:
-    /**
-     * This function replaus the disk log to reconstruct the
-     * key-value table, after a failure.
-     */
-    int recover();
+    const uint64_t RecoverBufSize = 512 * (1 << 20);  // 512Mb recover buf
 
-    /**
-     * Client can use <code>put</code> to update
-     * an key-value pair in the table
-     */
-    int put(std::string key, std::string value, int version);
+    // replayEntry replays the given log slice
+    void replayChunk(Chunk *chunk, char *chunkPayload)
+    {
+        const static int payloadOffset = offsetof(Entry, payload);
+        Entry *logEntry;
+        uint64_t entryOffset = 0;
+        std::string key;
+        std::string val;
 
-    /**
-     * Client can use <code>get</code> to get
-     * the current value of the given key.
-     */
-    int get(std::string key);
+        for (int i = 0, total = chunk->getEntryCnt(); i < total; i++)
+        {
+            /** TODO: is copy one-by-one a good idea?  */
+            logEntry = (Entry *)(chunkPayload + entryOffset);
+            key = std::string((char *)&logEntry->payload);
+            val = std::string((char *)&logEntry->payload + logEntry->keySize);
 
-    /**
-     * Client can use <code>delete_k</code> to
-     * delete the key-value pair from the table.
-     */
-    int delete_k(std::string key);
+            if (logEntry->version == std::numeric_limits<uint16_t>::max())
+                deleteK(key);
+            else
+                put(key, &val);
+
+            entryOffset +=
+                payloadOffset + logEntry->keySize + logEntry->valSize;
+        }
+    }
 };
 
 #endif

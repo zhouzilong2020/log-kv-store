@@ -8,40 +8,23 @@
 #include <string>
 #include <unordered_map>
 
-class naive_kv {
+#include "kv_store.h"
+
+class NaiveKV : public KVStore
+{
+   public:
+    // do nothing
+    ~NaiveKV(){};
+    virtual void put(const std::string &key, const std::string *val) override;
+    virtual std::unique_ptr<std::string> get(const std::string &key) override;
+    virtual void deleteK(const std::string &key) override;
+    virtual void persist() override;
+    virtual void recover() override;
+
    private:
     // this map stores the current in memory key-value table
-    std::unordered_map<std::string, std::string> kv_table;
-
-   public:
-    /**
-     * This function writes a snapshot of the current
-     * key-value table into the disk.
-     */
-    int take_snapshot12312();
-
-    /**
-     * This function recover the key-value table using
-     * the disk snapshot, after a failure.
-     */
-    int recover();
-
-    /**
-     * Client can use <code>put</code> to update
-     * an key-value pair in the table
-     */
-    int put(std::string key, std::string value, int version);
-
-    /**
-     * Client can use <code>get</code> to get
-     * the current value of the given key.
-     */
-    int get(std::string key);
-
-    /**
-     * Client can use <code>delete_k</code> to
-     * delete the key-value pair from the table.
-     */
-    int delete_k(std::string key);
+    std::unordered_map<std::string, std::string> kvTable;
+    const std::string persistFile = "./.persist/naive_kv";
+    uint byteSize = 0;
 };
 #endif
