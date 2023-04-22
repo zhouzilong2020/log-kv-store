@@ -29,3 +29,11 @@ void NaiveKV::deleteK(const std::string &key)
 {
     kvTable.erase(key);
 }
+
+void NaiveKV::persist()
+{
+}
+
+void NaiveKV::recover()
+{
+}

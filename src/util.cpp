@@ -50,32 +50,6 @@ void listDir(const char *path, std::vector<std::string> &files)
     }
 }
 
-/*
-void removeDir(const char *path)
-{
-    struct stat buffer;
-    if (stat(path, &buffer) == 0)
-    {
-        std::vector<std::string> files;
-        listDir(path, files);
-
-        for (auto &filep : files)
-        {
-            printf("Removing %s\n", filep.c_str());
-            if (remove(filep.c_str()) != 0)
-            {
-                printf("Error: remove %s failed\n", filep.c_str());
-            }
-        }
-        if (rmdir(path) == -1)
-        {
-            printf("Error: remove %s failed\n", path);
-        }
-    }
-    printf("\n\n");
-}
-*/
-
 bool existDir(const char *path)
 {
     struct stat buffer;
@@ -85,6 +59,8 @@ bool existDir(const char *path)
 
 void removeDir(const char *path)
 {
+    if (!existDir(path)) return;
+
     DIR *dir = opendir(path);
     struct dirent *entry;
 

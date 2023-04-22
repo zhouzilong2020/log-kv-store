@@ -16,15 +16,6 @@ typedef struct
     void *payload;  // key & value
 } Entry;
 
-enum chunkMeta
-{
-    CREATEDTS,
-    UPDATEDTS,
-    CAPACITY,
-    USED,
-    ENTRYCNT
-};
-
 /**
  * Chunk is the smallest unit of memory allocation. It is managed by Log.
  */
@@ -48,12 +39,11 @@ class Chunk
     {
         if (head) free(head);
     };
-
     char *getHead() { return head; };
-
     int getCapacity() { return capacity; };
-
     int getSize() { return used; };
+    int getEntryCnt() { return entryCnt; };
+    int getUsed() { return used; };
 
     Entry *append(const Entry *entry)
     {
@@ -108,24 +98,6 @@ class Chunk
         // commit point end
 
         return newEntry;
-    }
-
-    int get(chunkMeta target)
-    {
-        switch (target)
-        {
-        case CREATEDTS:
-            return createdTs;
-        case UPDATEDTS:
-            return updatedTs;
-        case CAPACITY:
-            return capacity;
-        case USED:
-            return used;
-        case ENTRYCNT:
-            return entryCnt;
-        }
-        return -1;
     }
 
    private:

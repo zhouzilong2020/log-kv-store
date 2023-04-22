@@ -13,14 +13,13 @@
 class NaiveKV : public KVStore
 {
    public:
-    virtual int put(const std::string &key, const std::string *val) override;
-
-    virtual std::unique_ptr<std::string> get(const std::string &key) override;
-
-    virtual void deleteK(const std::string &key) override;
-
     // do nothing
     ~NaiveKV(){};
+    virtual int put(const std::string &key, const std::string *val) override;
+    virtual std::unique_ptr<std::string> get(const std::string &key) override;
+    virtual void deleteK(const std::string &key) override;
+    virtual void persist() override;
+    virtual void recover() override;
 
    private:
     // this map stores the current in memory key-value table
