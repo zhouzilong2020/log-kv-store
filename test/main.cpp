@@ -4,6 +4,7 @@
 #include <naive_kv.h>
 #include <util.h>
 
+#include <cassert>
 #include <iostream>
 #include <string>
 #include <unordered_map>
@@ -17,7 +18,7 @@ std::string randomString(uint strLen)
 
     for (int i = 0; i < static_cast<int>(strLen); i++)
     {
-        char charASCII = 'a' + arc4random() % 26;
+        char charASCII = 'a' + rand() % 26;
         str.push_back(charASCII);
     }
 
@@ -195,7 +196,7 @@ void testBasicDelete()
     // randomly remove all
     for (uint i = 0, len = allKey.size(); i < len; i++)
     {
-        it = allKey.begin() + arc4random() % allKey.size();
+        it = allKey.begin() + rand() % allKey.size();
         map.erase(*it);
         logKV.deleteK(*it);
         assert(logKV.get(*it) == nullptr);
@@ -224,9 +225,9 @@ void testAdvanced()
         logKV.put(key, &val);
 
         // 10% chance to delete
-        if (arc4random() % 100 < 10)
+        if (rand() % 100 < 10)
         {
-            int idx = arc4random() % keys.size();
+            int idx = rand() % keys.size();
             auto key = keys[idx];
             keys.erase(keys.begin() + idx);
             map.erase(key);
@@ -234,9 +235,9 @@ void testAdvanced()
         }
 
         // 20% chance to update
-        if (arc4random() % 100 < 20)
+        if (rand() % 100 < 20)
         {
-            int idx = arc4random() % keys.size();
+            int idx = rand() % keys.size();
             auto key = keys[idx];
             std::string newVal = randomString(20);
             logKV.put(key, &newVal);

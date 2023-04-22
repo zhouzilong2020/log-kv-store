@@ -8,25 +8,10 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
-// #include <string>
+#include <algorithm>
+#include <cstring>
+#include <string>
 #include <vector>
-
-extern std::chrono::time_point<std::chrono::high_resolution_clock> start =
-    std::chrono::high_resolution_clock::now();
-
-void *setClock()
-{
-    start = std::chrono::high_resolution_clock::now();
-    return NULL;
-}
-
-std::chrono::microseconds getOpTime()
-{
-    auto stop = std::chrono::high_resolution_clock::now();
-    auto duration =
-        std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
-    return duration;
-}
 
 uint64_t getTS()
 {
@@ -49,9 +34,8 @@ void listDir(const char *path, std::vector<std::string> &files)
     {
         while ((it = readdir(dr)) != NULL)
         {
-            // printf("%s\n", it->d_name);
             filenames.push_back(
-                std::pair<int, std::string>(it->d_namlen, it->d_name));
+                std::pair<int, std::string>(strlen(it->d_name), it->d_name));
         }
         // sort it in log file generation order
         std::sort(filenames.begin(), filenames.end());

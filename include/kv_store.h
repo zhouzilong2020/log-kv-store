@@ -5,7 +5,9 @@
 
 #ifndef __KV_STORE_H__
 #define __KV_STORE_H__
+#include <algorithm>
 #include <iostream>
+#include <memory>
 #include <sstream>
 #include <string>
 #include <vector>
@@ -32,7 +34,7 @@ class KVStore
             else if (args[0] == CMD_GET)
             {
                 if (args.size() != 2) continue;
-                auto res = get(args[1]);
+                auto res = this->get(args[1]);
                 // if the key exists, print the value
                 if (res) std::cout << *res << std::endl;
             }
