@@ -108,7 +108,7 @@ def prepare_cmd(cmd_num: int, hot_key: float, hot_rate: float, hit_rate: float, 
     return cmd_list, (len(key_list)+len(hot_list))*602
 
 
-def argument_generator():
+def cartesian_argument_generator():
     '''calculate cmd on the fly'''
     for hot_key_fraction in hot_key_fractions:
         for hot_rate in hot_rates:
@@ -132,19 +132,44 @@ read_fractions = [0.2, 0.4, 0.6, 0.8, 0.99]
 resPath = "./exp"
 
 
+def example_argument_generator():
+    cmd_num = 1000000
+    cmd_dict = {
+        "read_intensive_no_hotkey":   [cmd_num, 0, 0, 0.95, 0.8],
+        "read_intensive_hotkey": [cmd_num, 0.2, 0.6, 0.95, 0.8],
+        "write_intensive_no_hotkey":   [cmd_num, 0, 0, 0.95, 0.2],
+        "write_intensive_hotkey": [cmd_num, 0.2, 0.6, 0.95, 0.2],
+    }
+    for name, args in cmd_dict.items():
+        yield args
+
+
+type = input(
+    "Please input the name of the experiment: [c for cartesian, e for example]")
+
 # Create a progress bar for the total progress
 with Progress(
     "[progress.description]{task.description}",
-        SpinnerColumn(),
+    SpinnerColumn(),
     BarColumn(),
     "[progress.percentage]{task.percentage:>3.0f}%",
     TimeRemainingColumn(),
     expand=True,
 ) as progress:
-    total = iteration*len(kv_types)*len(hot_key_fractions) * \
-        len(hot_rates)*len(hit_rates)*len(read_fractions)
-    task = progress.add_task("Total progress", total=total)
+    total = 0
+    argument_generator = None
+    if type == "c":
+        total = iteration*len(kv_types)*len(hot_key_fractions) * \
+            len(hot_rates)*len(hit_rates)*len(read_fractions)
+        argument_generator = cartesian_argument_generator
+    elif type == "e":
+        total = 4*iteration
+        argument_generator = example_argument_generator
+    else:
+        print("Invalid input")
+        exit(1)
 
+    task = progress.add_task("Total progress", total=total)
     for args in argument_generator():
         cmd, mem_expected = prepare_cmd(*args[:5])
         result_list = []
@@ -162,5 +187,5 @@ with Progress(
                 results.append(result)
                 progress.update(task_id=task, advance=1, refresh=True)
             result_list.append(results)
-       # TODO: dump result
-        np.save(f"{resPath}/{cmd_num}-{args[1]:.2f}-{args[2]:.2f}-{args[3]:.2f}-{args[4]:.2f}.npy", np.array(result_list))
+        np.save(
+            f"{resPath}/{cmd_num}-{args[1]:.2f}-{args[2]:.2f}-{args[3]:.2f}-{args[4]:.2f}.npy", np.array(result_list))
