@@ -128,6 +128,7 @@ hot_key_fractions = [0.01, 0.05, 0.1, 0.2]
 hot_rates = [0.7, 0.8, 0.9]
 hit_rates = [0.2, 0.6, 0.8, 0.99]
 read_fractions = [0.2, 0.4, 0.6, 0.8, 0.99]
+resPath = "./exp"
 
 
 # Create a progress bar for the total progress
@@ -154,8 +155,11 @@ with Progress(
                 f"hit_rate: {args[3]}\t"
                 f"read_fraction: {args[4]}"
             )
+            results = []
             for i in range(iteration):
                 result = run_experiment(kv_type, cmd)
-                result_list.append(result)
+                results.append(result)
                 progress.update(task_id=task, advance=1, refresh=True)
-       # TODO: dump result
+            result_list.append(results)
+
+        np.save(f"{resPath}/{cmd_num}-{args[1]:.2f}-{args[2]:.2f}-{args[3]:.2f}-{args[4]:.2f}.npy", np.array(result_list))
