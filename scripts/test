@@ -130,6 +130,8 @@ hot_rates = [0.7, 0.8, 0.9]
 hit_rates = [0.2, 0.6, 0.8, 0.99]
 read_fractions = [0.2, 0.4, 0.6, 0.8, 0.99]
 resPath = "./exp"
+if not os.path.exists(resPath):
+    os.mkdir(resPath)
 
 
 def example_argument_generator():
