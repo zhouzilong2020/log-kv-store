@@ -2,74 +2,160 @@
 
 import subprocess
 import random
+from typing import IO
 import time
 import string
-
 import shutil
 import os
+import numpy as np
+from rich.progress import Progress, BarColumn, TimeRemainingColumn, SpinnerColumn
+
+dir_path = './.persist'
+kv_types = ["log", "naive"]
 
 
-def launchExp(fraction):
-    dir_path = './.persist'
+def generate_random_string(length):
+    """Generate a random string of the given length."""
+    letters = string.ascii_lowercase
+    return ''.join(random.choice(letters) for _ in range(length))
+
+
+def run_experiment(kv_type: str, cmd_list: list):
     # Delete the directory and all its contents
     if os.path.exists(dir_path):
         shutil.rmtree(dir_path)
     os.mkdir(dir_path)
+    process = subprocess.Popen(
+        ["./log_kv", "-t", kv_type],
+        stdin=subprocess.PIPE,
+        stdout=subprocess.DEVNULL)  # dump the output to /dev/null
 
-    def generate_random_string(length):
-        """Generate a random string of the given length."""
-        letters = string.ascii_lowercase
-        return ''.join(random.choice(letters) for _ in range(length))
+    # if not isinstance(process.stdin, IO):
+    #     print("stdin is not instantiated")
+    #     return
 
-    # Open the log_kv executable and keep it running in the background
-    log_kv = subprocess.Popen(
-        ["./log_kv", "-t", "log"],
-        stdin=subprocess.PIPE, stdout=subprocess.DEVNULL)
-    naive_kv = subprocess.Popen(
-        ["./log_kv", "-t", "naive"],
-        stdin=subprocess.PIPE, stdout=subprocess.DEVNULL)
+    # Measure the time taken to insert the key-value pairs
+    start_time = time.time()
+    # Input all key-value pairs into the log_kv process
+    for cmd, param in cmd_list:
+        input_str = f"{cmd} {param}\n"
+        process.stdin.write(input_str.encode())
+        process.stdin.flush()
 
-    # leave delete for now
-    key_list = []
-    cmd_list = []
-    cmd_num = 1000000
-    read_frac = fraction
+    # Close the input stream to the log_kv process
+    process.stdin.close()
+    process.wait()
 
-    for i in range(cmd_num):
-        if i % 10000 == 0:
-            print(i)
-        # put some kv before get
-        if i > 1000 and random.randint(0, 100) < read_frac * 100:
-            key = random.choice(key_list)
-            cmd_list.append(["get", f"{key}"])
+    end_time = time.time()
+    elapsed_time = end_time - start_time
+    return len(cmd_list)/elapsed_time, elapsed_time
+
+
+def prepare_cmd(cmd_num: int, hot_key: float, hot_rate: float, hit_rate: float, read_fraction: float):
+    def put():
+        key = generate_random_string(100)
+        value = generate_random_string(500)
+        if random.randint(0, 1000) < hot_key*1000:
+            # hot key
+            hot_list.append(key)
+            # hot_set.add(key)
+        else:
+            key_list.append(key)
+            # key_set.add(key)
+        cmd_list.append(["put", f"{key} {value}"])
+
+    def delete():
+        key = random.choice(key_list)
+        key_list.remove(key)
+        if key in read_set:
+            read_set.remove(key)
+        cmd_list.append(["delete", key])
+
+    def get():
+        is_hit = random.randint(0, 1000) < hit_rate*1000
+        if is_hit:
+            if random.randint(0, 1000) < hot_rate*1000:
+                key = random.choice(hot_list)
+            else:
+                key = random.choice(key_list)
+            read_set.add(key)
         else:
             key = generate_random_string(100)
-            value = generate_random_string(1000)
-            key_list.append(key)
-            cmd_list.append(["put", f"{key} {value}"])
+        cmd_list.append(["get", key])
 
-    def measure(process: subprocess.Popen):
-        # Measure the time taken to insert the key-value pairs
-        start_time = time.time()
-        # Input all key-value pairs into the log_kv process
-        for cmd, param in cmd_list:
-            input_str = f"{cmd} {param}\n"
-            process.stdin.write(input_str.encode())
-            process.stdin.flush()
+    key_list = []
+    hot_list = []
+    read_set = set()
+    cmd_list = []
+    # put something before update
+    for i in range(1000):
+        put()
 
-        # Close the input stream to the log_kv process
-        process.stdin.close()
-        process.wait()
+    for i in range(cmd_num):
+        op = random.randint(0, 100)
+        if len(key_list) > 0:
+            if op < read_fraction * 100:
+                get()
+            else:
+                # uniform delete and put
+                if op % 10 == 0:
+                    delete()
+                else:
+                    put()
+        else:
+            put()
+    return cmd_list
 
-        end_time = time.time()
-        elapsed_time = end_time - start_time
-        print(
-            f"throughput: {(cmd_num / elapsed_time):.4f} kv/s, time: {elapsed_time:.4f} s, kv_num: {cmd_num}")
 
-    measure(log_kv)
-    measure(naive_kv)
+def argument_generator():
+    '''calculate cmd on the fly'''
+    for hot_key_fraction in hot_key_fractions:
+        for hot_rate in hot_rates:
+            for hit_rate in hit_rates:
+                for read_fraction in read_fractions:
+                    yield [
+                        cmd_num,
+                        hot_key_fraction,
+                        hot_rate,
+                        hit_rate,
+                        read_fraction
+                    ]
 
 
-for i in [.2, .3, .4, .5, .6, .7, .8, .9, 1]:
-    print(i)
-    launchExp(i)
+iteration = 5
+cmd_num = 1000
+hot_key_fractions = [0.01, 0.05, 0.1, 0.2]
+hot_rates = [0.7, 0.8, 0.9]
+hit_rates = [0.2, 0.6, 0.8, 0.99]
+read_fractions = [0.2, 0.4, 0.6, 0.8, 0.99]
+
+
+# Create a progress bar for the total progress
+with Progress(
+    "[progress.description]{task.description}",
+        SpinnerColumn(),
+    BarColumn(),
+    "[progress.percentage]{task.percentage:>3.0f}%",
+    TimeRemainingColumn(),
+    expand=True,
+) as progress:
+    total = iteration*len(kv_types)*len(hot_key_fractions) * \
+        len(hot_rates)*len(hit_rates)*len(read_fractions)
+    task = progress.add_task("Total progress", total=total)
+
+    for args in argument_generator():
+        cmd = prepare_cmd(args[0], args[1], args[2], args[3], args[4])
+        result_list = []
+        for kv_type in kv_types:
+            progress.log(
+                f"running {kv_type}\t"
+                f"hot_key: {args[1]}\t"
+                f"hot_rate: {args[2]}\t"
+                f"hit_rate: {args[3]}\t"
+                f"read_fraction: {args[4]}"
+            )
+            for i in range(iteration):
+                result = run_experiment(kv_type, cmd)
+                result_list.append(result)
+                progress.update(task_id=task, advance=1, refresh=True)
+       # TODO: dump result
