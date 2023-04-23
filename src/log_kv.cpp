@@ -133,5 +133,11 @@ void LogKV::recover()
 
 void LogKV::persist()
 {
+    auto start_time = std::chrono::high_resolution_clock::now();
     this->log->persist();
+    auto end_time = std::chrono::high_resolution_clock::now();
+    persistTime++;
+    persistDuration += std::chrono::duration_cast<std::chrono::milliseconds>(
+                           end_time - start_time)
+                           .count();
 }

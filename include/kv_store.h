@@ -22,7 +22,6 @@ class KVStore
         while (std::getline(std::cin, line))
         {
             std::vector<std::string> args = split(line, ' ');
-            if (args.size() < 2) continue;
             // convert to lower case
             std::transform(args[0].begin(), args[0].end(), args[0].begin(),
                            [](unsigned char c) { return std::tolower(c); });
@@ -43,6 +42,10 @@ class KVStore
                 if (args.size() != 2) continue;
                 deleteK(args[1]);
             }
+            else if (args[0] == CMD_STATISTIC)
+            {
+                statistic();
+            }
         }
     }
 
@@ -59,11 +62,24 @@ class KVStore
     //  recover replays the disk log to reconstruct the key-value table, after a
     //  failure.
     virtual void recover() = 0;
+    // statistic prints the breakdown time of kernel operations.
+    // (i.e. how many time is spent on each persist, new chunk, malloc, etc.)
+    void statistic()
+    {
+        std::cout << "Persist time: " << persistTime << std::endl;
+        std::cout << "Persist duration: " << persistDuration << "ms"
+                  << std::endl;
+    };
+
+   protected:
+    uint persistTime = 0;
+    long long persistDuration = 0;
 
    private:
     const std::string CMD_PUT = "put";
     const std::string CMD_GET = "get";
     const std::string CMD_DELETE = "delete";
+    const std::string CMD_STATISTIC = "statistic";
 
     std::vector<std::string> split(const std::string &str, char delimiter)
     {

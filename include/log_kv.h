@@ -56,7 +56,6 @@ class LogKV : public KVStore
     Log *log;
     size_t tableSize;
     int duplicatedEntryCnt;
-
     const uint64_t RecoverBufSize = 512 * (1 << 20);  // 512Mb recover buf
 
     // replayEntry replays the given log slice
