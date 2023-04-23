@@ -4,11 +4,11 @@ Experiments:
 Target Scenario -> Large Scale (table size > 100,0000) KV Store
 
 Trial experiments
-1. read intensive 
+1. read intensive # 0.2 - 0.8
     - random -> naive > log
     - hot key -> naive > log
     - uniform -> naive > log
-2. write intensive
+2. write intensive # 0.8 - 0.2
     - random -> 
     - hot key
     - uniform
