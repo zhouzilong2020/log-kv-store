@@ -192,4 +192,4 @@ with Progress(
                 p.update(task_id=task, advance=1, refresh=True)
             result_list.append(results)
         np.save(
-            f"{resPath}/{cmd_num}-{args[1]:.2f}-{args[2]:.2f}-{args[3]:.2f}-{args[4]:.2f}.npy", np.array(result_list))
+            f"{resPath}/{args[0]}-{args[1]:.2f}-{args[2]:.2f}-{args[3]:.2f}-{args[4]:.2f}.npy", np.array(result_list))
