@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import argparse
 import subprocess
 import random
 from typing import IO
@@ -30,16 +31,15 @@ def run_experiment(kv_type: str, cmd_list: list):
         ["./log_kv", "-t", kv_type],
         stdin=subprocess.PIPE,
         stdout=subprocess.DEVNULL)  # dump the output to /dev/null
-    # if not isinstance(process.stdin, IO):
-    #     print("stdin is not instantiated")
-    #     return
+
+    if process.poll() is not None:
+        raise RuntimeError("log_kv process has terminated unexpectedly")
 
     # Measure the time taken to insert the key-value pairs
     start_time = time.time()
     # Input all key-value pairs into the log_kv process
-    for cmd, param in cmd_list:
-        input_str = f"{cmd} {param}\n"
-        process.stdin.write(input_str.encode())
+    for cmd in cmd_list:
+        process.stdin.write(cmd.encode())
         process.stdin.flush()
 
     # Close the input stream to the log_kv process
@@ -63,14 +63,14 @@ def prepare_cmd(cmd_num: int, hot_key: float, hot_rate: float, hit_rate: float, 
         else:
             key_list.append(key)
             # key_set.add(key)
-        cmd_list.append(["put", f"{key} {value}"])
+        cmd_list.append(f"put {key} {value}")
 
     def delete():
         key = random.choice(key_list)
         key_list.remove(key)
         if key in read_set:
             read_set.remove(key)
-        cmd_list.append(["delete", key])
+        cmd_list.append(f"delete {key}")
 
     def get():
         is_hit = random.randint(0, 1000) < hit_rate*1000
@@ -82,7 +82,7 @@ def prepare_cmd(cmd_num: int, hot_key: float, hot_rate: float, hit_rate: float, 
             read_set.add(key)
         else:
             key = generate_random_string(100)
-        cmd_list.append(["get", key])
+        cmd_list.append(f"get {key}")
 
     key_list = []
     hot_list = []
@@ -142,12 +142,14 @@ def example_argument_generator():
         "write_intensive_no_hotkey":   [cmd_num, 0, 0, 0.95, 0.2],
         "write_intensive_hotkey": [cmd_num, 0.2, 0.6, 0.95, 0.2],
     }
-    for name, args in cmd_dict.items():
+    for _, args in cmd_dict.items():
         yield args
 
 
-type = input(
-    "Please input the name of the experiment: [c for cartesian, e for example]")
+parser = argparse.ArgumentParser(description="run experiment")
+parser.add_argument("experiment_type",
+                    help="experiment type, c for cartesian, e for example")
+experiment_type = parser.parse_args().experiment_type
 
 # Create a progress bar for the total progress
 with Progress(
@@ -157,26 +159,26 @@ with Progress(
     "[progress.percentage]{task.percentage:>3.0f}%",
     TimeRemainingColumn(),
     expand=True,
-) as progress:
+) as p:
     total = 0
     argument_generator = None
-    if type == "c":
+    if experiment_type == "c":
         total = iteration*len(kv_types)*len(hot_key_fractions) * \
             len(hot_rates)*len(hit_rates)*len(read_fractions)
         argument_generator = cartesian_argument_generator
-    elif type == "e":
+    elif experiment_type == "e":
         total = 4*iteration
         argument_generator = example_argument_generator
     else:
         print("Invalid input")
         exit(1)
 
-    task = progress.add_task("Total progress", total=total)
+    task = p.add_task("Total progress", total=total)
     for args in argument_generator():
         cmd, mem_expected = prepare_cmd(*args[:5])
         result_list = []
         for kv_type in kv_types:
-            progress.log(
+            p.log(
                 f"running {kv_type}\t"
                 f"hot_key: {args[1]}\t"
                 f"hot_rate: {args[2]}\t"
@@ -185,9 +187,9 @@ with Progress(
             )
             results = []
             for i in range(iteration):
-                result = run_experiment("kv_type", cmd)
+                result = run_experiment(kv_type, cmd)
                 results.append(result)
-                progress.update(task_id=task, advance=1, refresh=True)
+                p.update(task_id=task, advance=1, refresh=True)
             result_list.append(results)
         np.save(
             f"{resPath}/{cmd_num}-{args[1]:.2f}-{args[2]:.2f}-{args[3]:.2f}-{args[4]:.2f}.npy", np.array(result_list))
