@@ -158,8 +158,8 @@ with Progress(
             )
             results = []
             for i in range(iteration):
-                result, mem_used = run_experiment("kv_type", cmd)
-                results.append(result, mem_used)
+                result = run_experiment("kv_type", cmd)
+                results.append(result)
                 progress.update(task_id=task, advance=1, refresh=True)
             result_list.append(results)
        # TODO: dump result
