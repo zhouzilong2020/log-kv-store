@@ -424,4 +424,9 @@ int main(int argc, char **argv)
         kv->run();
         delete kv;
     }
+    else
+    {
+        print_usage();
+        exit(EXIT_SUCCESS);
+    }
 }
