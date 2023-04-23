@@ -1,0 +1,75 @@
+#!/usr/bin/env python3
+
+import subprocess
+import random
+import time
+import string
+
+import shutil
+import os
+
+
+def launchExp(fraction):
+    dir_path = './.persist'
+    # Delete the directory and all its contents
+    if os.path.exists(dir_path):
+        shutil.rmtree(dir_path)
+    os.mkdir(dir_path)
+
+    def generate_random_string(length):
+        """Generate a random string of the given length."""
+        letters = string.ascii_lowercase
+        return ''.join(random.choice(letters) for _ in range(length))
+
+    # Open the log_kv executable and keep it running in the background
+    log_kv = subprocess.Popen(
+        ["./log_kv", "-t", "log"],
+        stdin=subprocess.PIPE, stdout=subprocess.DEVNULL)
+    naive_kv = subprocess.Popen(
+        ["./log_kv", "-t", "naive"],
+        stdin=subprocess.PIPE, stdout=subprocess.DEVNULL)
+
+    # leave delete for now
+    key_list = []
+    cmd_list = []
+    cmd_num = 1000000
+    read_frac = fraction
+
+    for i in range(cmd_num):
+        if i % 10000 == 0:
+            print(i)
+        # put some kv before get
+        if i > 1000 and random.randint(0, 100) < read_frac * 100:
+            key = random.choice(key_list)
+            cmd_list.append(["get", f"{key}"])
+        else:
+            key = generate_random_string(100)
+            value = generate_random_string(1000)
+            key_list.append(key)
+            cmd_list.append(["put", f"{key} {value}"])
+
+    def measure(process: subprocess.Popen):
+        # Measure the time taken to insert the key-value pairs
+        start_time = time.time()
+        # Input all key-value pairs into the log_kv process
+        for cmd, param in cmd_list:
+            input_str = f"{cmd} {param}\n"
+            process.stdin.write(input_str.encode())
+            process.stdin.flush()
+
+        # Close the input stream to the log_kv process
+        process.stdin.close()
+        process.wait()
+
+        end_time = time.time()
+        elapsed_time = end_time - start_time
+        print(
+            f"throughput: {(cmd_num / elapsed_time):.4f} kv/s, time: {elapsed_time:.4f} s, kv_num: {cmd_num}")
+
+    measure(log_kv)
+    measure(naive_kv)
+
+
+for i in [.2, .3, .4, .5, .6, .7, .8, .9, 1]:
+    print(i)
+    launchExp(i)
