@@ -3,6 +3,7 @@
 import subprocess
 import random
 from typing import IO
+import psutil
 import time
 import string
 import shutil
@@ -29,7 +30,6 @@ def run_experiment(kv_type: str, cmd_list: list):
         ["./log_kv", "-t", kv_type],
         stdin=subprocess.PIPE,
         stdout=subprocess.DEVNULL)  # dump the output to /dev/null
-
     # if not isinstance(process.stdin, IO):
     #     print("stdin is not instantiated")
     #     return
@@ -44,11 +44,12 @@ def run_experiment(kv_type: str, cmd_list: list):
 
     # Close the input stream to the log_kv process
     process.stdin.close()
+    mem_used = psutil.Process(process.pid).memory_info().rss
     process.wait()
 
     end_time = time.time()
     elapsed_time = end_time - start_time
-    return len(cmd_list)/elapsed_time, elapsed_time
+    return [len(cmd_list)/elapsed_time, elapsed_time], mem_used
 
 
 def prepare_cmd(cmd_num: int, hot_key: float, hot_rate: float, hit_rate: float, read_fraction: float):
@@ -104,7 +105,7 @@ def prepare_cmd(cmd_num: int, hot_key: float, hot_rate: float, hit_rate: float, 
                     put()
         else:
             put()
-    return cmd_list
+    return cmd_list, (len(key_list)+len(hot_list))*602
 
 
 def argument_generator():
@@ -123,7 +124,7 @@ def argument_generator():
 
 
 iteration = 5
-cmd_num = 1000
+cmd_num = 100000
 hot_key_fractions = [0.01, 0.05, 0.1, 0.2]
 hot_rates = [0.7, 0.8, 0.9]
 hit_rates = [0.2, 0.6, 0.8, 0.99]
@@ -144,7 +145,7 @@ with Progress(
     task = progress.add_task("Total progress", total=total)
 
     for args in argument_generator():
-        cmd = prepare_cmd(args[0], args[1], args[2], args[3], args[4])
+        cmd, mem_expected = prepare_cmd(*args[:5])
         result_list = []
         for kv_type in kv_types:
             progress.log(
@@ -155,7 +156,8 @@ with Progress(
                 f"read_fraction: {args[4]}"
             )
             for i in range(iteration):
-                result = run_experiment(kv_type, cmd)
-                result_list.append(result)
+                result, mem_used = run_experiment("kv_type", cmd)
+                result_list.append([*result, mem_used])
                 progress.update(task_id=task, advance=1, refresh=True)
+                exit(1)
        # TODO: dump result
