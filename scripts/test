@@ -1,0 +1,195 @@
+#!/usr/bin/env python3
+
+import argparse
+import subprocess
+import random
+from typing import IO
+import psutil
+import time
+import string
+import shutil
+import os
+import numpy as np
+from rich.progress import Progress, BarColumn, TimeRemainingColumn, SpinnerColumn
+
+dir_path = './.persist'
+kv_types = ["log", "naive"]
+
+
+def generate_random_string(length):
+    """Generate a random string of the given length."""
+    letters = string.ascii_lowercase
+    return ''.join(random.choice(letters) for _ in range(length))
+
+
+def run_experiment(kv_type: str, cmd_list: list):
+    # Delete the directory and all its contents
+    if os.path.exists(dir_path):
+        shutil.rmtree(dir_path)
+    os.mkdir(dir_path)
+    process = subprocess.Popen(
+        ["./log_kv", "-t", kv_type],
+        stdin=subprocess.PIPE,
+        stdout=subprocess.DEVNULL)  # dump the output to /dev/null
+
+    if process.poll() is not None:
+        raise RuntimeError("log_kv process has terminated unexpectedly")
+
+    # Measure the time taken to insert the key-value pairs
+    start_time = time.time()
+    # Input all key-value pairs into the log_kv process
+    for cmd in cmd_list:
+        process.stdin.write(cmd.encode())
+        process.stdin.flush()
+
+    # Close the input stream to the log_kv process
+    process.stdin.close()
+    mem_used = psutil.Process(process.pid).memory_info().rss
+    process.wait()
+
+    end_time = time.time()
+    elapsed_time = end_time - start_time
+    return [len(cmd_list)/elapsed_time, elapsed_time, mem_used]
+
+
+def prepare_cmd(cmd_num: int, hot_key: float, hot_rate: float, hit_rate: float, read_fraction: float):
+    def put():
+        key = generate_random_string(100)
+        value = generate_random_string(500)
+        if random.randint(0, 1000) < hot_key*1000:
+            # hot key
+            hot_list.append(key)
+            # hot_set.add(key)
+        else:
+            key_list.append(key)
+            # key_set.add(key)
+        cmd_list.append(f"put {key} {value}")
+
+    def delete():
+        key = random.choice(key_list)
+        key_list.remove(key)
+        if key in read_set:
+            read_set.remove(key)
+        cmd_list.append(f"delete {key}")
+
+    def get():
+        is_hit = random.randint(0, 1000) < hit_rate*1000
+        if is_hit:
+            if random.randint(0, 1000) < hot_rate*1000:
+                key = random.choice(hot_list)
+            else:
+                key = random.choice(key_list)
+            read_set.add(key)
+        else:
+            key = generate_random_string(100)
+        cmd_list.append(f"get {key}")
+
+    key_list = []
+    hot_list = []
+    read_set = set()
+    cmd_list = []
+    # put something before update
+    for i in range(1000):
+        put()
+
+    for i in range(cmd_num):
+        op = random.randint(0, 100)
+        if len(key_list) > 0:
+            if op < read_fraction * 100:
+                get()
+            else:
+                # uniform delete and put
+                if op % 10 == 0:
+                    delete()
+                else:
+                    put()
+        else:
+            put()
+    return cmd_list, (len(key_list)+len(hot_list))*602
+
+
+def cartesian_argument_generator():
+    '''calculate cmd on the fly'''
+    for hot_key_fraction in hot_key_fractions:
+        for hot_rate in hot_rates:
+            for hit_rate in hit_rates:
+                for read_fraction in read_fractions:
+                    yield [
+                        cmd_num,
+                        hot_key_fraction,
+                        hot_rate,
+                        hit_rate,
+                        read_fraction
+                    ]
+
+
+iteration = 5
+cmd_num = 100000
+hot_key_fractions = [0.01, 0.05, 0.1, 0.2]
+hot_rates = [0.7, 0.8, 0.9]
+hit_rates = [0.2, 0.6, 0.8, 0.99]
+read_fractions = [0.2, 0.4, 0.6, 0.8, 0.99]
+resPath = "./exp"
+if not os.path.exists(resPath):
+    os.mkdir(resPath)
+
+
+def example_argument_generator():
+    cmd_num = 1000000
+    cmd_dict = {
+        "read_intensive_no_hotkey":   [cmd_num, 0, 0, 0.95, 0.8],
+        "read_intensive_hotkey": [cmd_num, 0.2, 0.6, 0.95, 0.8],
+        "write_intensive_no_hotkey":   [cmd_num, 0, 0, 0.95, 0.2],
+        "write_intensive_hotkey": [cmd_num, 0.2, 0.6, 0.95, 0.2],
+    }
+    for _, args in cmd_dict.items():
+        yield args
+
+
+parser = argparse.ArgumentParser(description="run experiment")
+parser.add_argument("experiment_type",
+                    help="experiment type, c for cartesian, e for example")
+experiment_type = parser.parse_args().experiment_type
+
+# Create a progress bar for the total progress
+with Progress(
+    "[progress.description]{task.description}",
+    SpinnerColumn(),
+    BarColumn(),
+    "[progress.percentage]{task.percentage:>3.0f}%",
+    TimeRemainingColumn(),
+    expand=True,
+) as p:
+    total = 0
+    argument_generator = None
+    if experiment_type == "c":
+        total = iteration*len(kv_types)*len(hot_key_fractions) * \
+            len(hot_rates)*len(hit_rates)*len(read_fractions)
+        argument_generator = cartesian_argument_generator
+    elif experiment_type == "e":
+        total = 4*iteration
+        argument_generator = example_argument_generator
+    else:
+        print("Invalid input")
+        exit(1)
+
+    task = p.add_task("Total progress", total=total)
+    for args in argument_generator():
+        cmd, mem_expected = prepare_cmd(*args[:5])
+        result_list = []
+        for kv_type in kv_types:
+            p.log(
+                f"running {kv_type}\t"
+                f"hot_key: {args[1]}\t"
+                f"hot_rate: {args[2]}\t"
+                f"hit_rate: {args[3]}\t"
+                f"read_fraction: {args[4]}"
+            )
+            results = []
+            for i in range(iteration):
+                result = run_experiment(kv_type, cmd)
+                results.append(result)
+                p.update(task_id=task, advance=1, refresh=True)
+            result_list.append(results)
+        np.save(
+            f"{resPath}/{args[0]}-{args[1]:.2f}-{args[2]:.2f}-{args[3]:.2f}-{args[4]:.2f}.npy", np.array(result_list))

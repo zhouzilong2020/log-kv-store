@@ -45,6 +45,7 @@ void NaiveKV::deleteK(const std::string& key)
 
 void NaiveKV::persist()
 {
+    auto start_time = std::chrono::high_resolution_clock::now();
     std::ofstream outFile(persistFile, std::ios::trunc);
     if (outFile.is_open())
     {
@@ -54,6 +55,12 @@ void NaiveKV::persist()
         }
         outFile.close();
     }
+    auto end_time = std::chrono::high_resolution_clock::now();
+    // calculate the duration
+    persistTime++;
+    persistDuration += std::chrono::duration_cast<std::chrono::milliseconds>(
+                           end_time - start_time)
+                           .count();
 }
 
 void NaiveKV::recover()
