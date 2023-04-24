@@ -13,7 +13,9 @@
 #include <string>
 #include <vector>
 
-Log::Log(std::unordered_map<std::string, Entry *> *kvTable)
+Log::Log(std::unordered_map<std::string, Entry *> *kvTable,
+         const std::string &persistRoot)
+    : PersistRoot(persistRoot)
 {
     static int cnt = 0;
     cnt++;

@@ -61,7 +61,8 @@ class Log
    public:
     Log(const std::string &persistRoot);
     ~Log();
-    Log(std::unordered_map<std::string, Entry *> *kvTable);
+    Log(std::unordered_map<std::string, Entry *> *kvTable,
+        const std::string &persistRoot);
 
     int persist();
     // append appends the key-value pair and their version number into the log
