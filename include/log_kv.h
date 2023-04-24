@@ -33,7 +33,7 @@ class LogKV : public KVStore
     {
         double currentUsg = double(log->currentChunkUsed()) /
                             double(log->currentChunkCapacity());
-        if (duplicatedEntryCnt < (1 << 15) || currentUsg < 0.8)
+        if (duplicatedEntryCnt < (1 << 18) || currentUsg < 0.8)
         {
             return;
         }
