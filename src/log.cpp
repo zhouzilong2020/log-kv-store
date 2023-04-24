@@ -5,8 +5,6 @@
  */
 
 #include <log.h>
-#include <sys/stat.h>
-#include <sys/types.h>
 #include <unistd.h>
 #include <util.h>
 
@@ -15,7 +13,9 @@
 #include <string>
 #include <vector>
 
-Log::Log(std::unordered_map<std::string, Entry *> *kvTable)
+Log::Log(std::unordered_map<std::string, Entry *> *kvTable,
+         const std::string &persistRoot)
+    : PersistRoot(persistRoot)
 {
     static int cnt = 0;
     cnt++;
@@ -39,23 +39,16 @@ Log::Log(std::unordered_map<std::string, Entry *> *kvTable)
     // persist();
 }
 
-Log::Log()
+Log::Log(const std::string &persistRoot) : PersistRoot(persistRoot)
 {
     head = NULL;
     currentFileId = 0;
     nextPersistChunk = 0;
     expend();
-
-    // initialize persist directory
-    if (!existDir(PersistRoot.c_str()))
-    {
-        // owner can read/write, group can read
-        mkdir(PersistRoot.c_str(), 0777);
-    }
-
     // initialize non-recovering log
     recovering = false;
 }
+
 Log::~Log()
 {
     // FIXME:partial persist
@@ -64,6 +57,8 @@ Log::~Log()
     {
         if (chunk) delete chunk;
     }
+    std::cout << "Persist time: " << persistTime << std::endl;
+    std::cout << "Persist duration: " << persistDuration << "ms" << std::endl;
 }
 
 Entry *Log::append(const int version, const std::string &key,

@@ -14,13 +14,11 @@
 #include <cstdint>
 #include <fstream>
 #include <iostream>
+#include <string>
 #include <unordered_map>
 #include <vector>
 
 #include "../include/util.h"
-
-// TODO: make it configurable
-static std::string PersistRoot = "./.persist";
 
 // on disk meta info, one per persistent file
 struct MetaInfoPersistentFile
@@ -61,9 +59,10 @@ typedef struct MetaInfoPersistentFile MetaInfoPersistentFile;
 class Log
 {
    public:
-    Log();
+    Log(const std::string &persistRoot);
     ~Log();
-    Log(std::unordered_map<std::string, Entry *> *kvTable);
+    Log(std::unordered_map<std::string, Entry *> *kvTable,
+        const std::string &persistRoot);
 
     int persist();
     // append appends the key-value pair and their version number into the log
@@ -96,6 +95,10 @@ class Log
     int nextPersistChunk;  // nextPersistChunk points to the next log
                            // that needed to be persisted to disk
     bool recovering;  // indicate that the logkv is replaying the previous log
+    int persistTime = 0;
+    long long persistDuration = 0;
+
+    const std::string PersistRoot;
 
     const uint64_t ChunkSize = 1 << 21;  // 2Mb chunk size
     const uint64_t FileSize = 1 << 31;   // 2Gb file size
@@ -110,7 +113,17 @@ class Log
             exit(1);
         }
         // write back happens whenever a segment is filled
-        if (chunkList.size() != 0 && !recovering && doPersist) persist();
+        if (chunkList.size() != 0 && !recovering && doPersist)
+        {
+            persistTime++;
+            auto start = std::chrono::high_resolution_clock::now();
+            persist();
+            auto end = std::chrono::high_resolution_clock::now();
+            persistDuration +=
+                std::chrono::duration_cast<std::chrono::milliseconds>(end -
+                                                                      start)
+                    .count();
+        }
 
         chunkList.push_back(newChunk);
         head = newChunk;
