@@ -13,7 +13,7 @@ void NaiveKV::put(const std::string& key, const std::string* val)
 {
     kvTable[key] = *val;
     byteSize += key.size() + val->size();
-    if (byteSize > 2 << 20)
+    if (byteSize > (2 << 20))
     {
         persist();
         byteSize = 0;
@@ -36,7 +36,7 @@ void NaiveKV::deleteK(const std::string& key)
 {
     kvTable.erase(key);
     byteSize += key.size();
-    if (byteSize > 2 << 20)
+    if (byteSize > (2 << 20))
     {
         persist();
         byteSize = 0;
@@ -54,13 +54,15 @@ void NaiveKV::persist()
             outFile << pair.first << " " << pair.second << std::endl;
         }
         outFile.close();
+
+        auto end_time = std::chrono::high_resolution_clock::now();
+        // calculate the duration
+        persistTime++;
+        persistDuration +=
+            std::chrono::duration_cast<std::chrono::milliseconds>(end_time -
+                                                                  start_time)
+                .count();
     }
-    auto end_time = std::chrono::high_resolution_clock::now();
-    // calculate the duration
-    persistTime++;
-    persistDuration += std::chrono::duration_cast<std::chrono::milliseconds>(
-                           end_time - start_time)
-                           .count();
 }
 
 void NaiveKV::recover()

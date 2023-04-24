@@ -5,7 +5,12 @@
 
 #ifndef __KV_STORE_H__
 #define __KV_STORE_H__
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <util.h>
+
 #include <algorithm>
+#include <filesystem>
 #include <iostream>
 #include <memory>
 #include <sstream>
@@ -49,6 +54,15 @@ class KVStore
         }
     }
 
+    KVStore()
+    {
+        // initialize persist directory
+        if (!existDir(PersistRoot.c_str()))
+        {
+            // owner can read/write, group can read
+            mkdir(PersistRoot.c_str(), 0777);
+        }
+    };
     virtual ~KVStore(){};
     // put creates or updates a key-value pair in the table. val is nullable so
     // we use pointer here.
@@ -72,6 +86,8 @@ class KVStore
     };
 
    protected:
+    // TODO: make it configurable
+    const std::string PersistRoot = "./.persist";
     uint persistTime = 0;
     long long persistDuration = 0;
 

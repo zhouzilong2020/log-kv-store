@@ -12,7 +12,7 @@
 
 LogKV::LogKV()
 {
-    log = new Log();
+    log = new Log(PersistRoot);
     tableSize = 0;
     duplicatedEntryCnt = 0;
 }
