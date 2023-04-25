@@ -339,7 +339,7 @@ void testPersist()
     printf("Succeed!\n");
 }
 
-void recoveryExperient(long cmdNum, recoveryExp &recExp, uint persistByte)
+void recoveryExperiment(long cmdNum, recoveryExp &recExp, uint persistByte)
 {
     LogKV logKV;
     NaiveKV naiveKV;
@@ -460,7 +460,7 @@ void testRec()
                 if (existDir(".persist")) removeDir(".persist");
 
                 std::cout << "iteration " << i << std::endl;
-                recoveryExperient(cmd, recExp, persistByte);
+                recoveryExperiment(cmd, recExp, persistByte);
                 fs << recExp.cmdNum << " " << recExp.naivePersistByte << " "
                    << recExp.logKV_duration << " " << recExp.naiveKV_duration
                    << " " << recExp.logKV_fail << " " << recExp.naiveKV_fail
@@ -479,26 +479,26 @@ void runTest()
 {
     if (existDir(".persist")) removeDir(".persist");
 
-    // testBasicGetPut();
-    // removeDir(".persist");
+    testBasicGetPut();
+    removeDir(".persist");
 
-    // testBasicDelete();
-    // removeDir(".persist");
+    testBasicDelete();
+    removeDir(".persist");
 
-    // testAdvanced();
-    // removeDir(".persist");
+    testAdvanced();
+    removeDir(".persist");
 
-    // testBigKV();
-    // removeDir(".persist");
+    testBigKV();
+    removeDir(".persist");
 
-    // testRecoverDbg();
-    // removeDir(".persist");
+    testRecoverDbg();
+    removeDir(".persist");
 
-    // testRecoverBig();
-    // removeDir(".persist");
+    testRecoverBig();
+    removeDir(".persist");
 
-    // testPersist();
-    // removeDir(".persist");
+    testPersist();
+    removeDir(".persist");
 
     printf("ALL TEST PASSED\n");
 }
@@ -519,6 +519,7 @@ void print_usage()
     printf("  -t, --type   %s\n",
            "Choose the type of KVStore, possible options: [naive/log]");
     printf("  -T, --test   %s\n", "Run build in test");
+    printf("  -e, --exp   %s\n", "Run experiment");
 }
 
 int main(int argc, char **argv)
@@ -526,8 +527,8 @@ int main(int argc, char **argv)
     int option_index = 0;
     int c;
     KVStore *kv = NULL;
-    while ((c = getopt_long(argc, argv, "ht:T:E", long_options, &option_index)) !=
-           -1)
+    while ((c = getopt_long(argc, argv, "ht:TE", long_options,
+                            &option_index)) != -1)
     {
         switch (c)
         {
