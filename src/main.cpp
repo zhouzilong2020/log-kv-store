@@ -339,6 +339,142 @@ void testPersist()
     printf("Succeed!\n");
 }
 
+void recoveryExperiment(long cmdNum, recoveryExp &recExp, uint persistByte)
+{
+    LogKV logKV;
+    NaiveKV naiveKV;
+    std::unordered_map<std::string, std::string> map;
+    naiveKV.setPersistByte(persistByte);
+
+    std::string key;
+    std::string val;
+    std::unique_ptr<std::string> buf_logKV;
+    std::unique_ptr<std::string> buf_naiveKV;
+
+    uint64_t logKV_duration = 0;
+    uint64_t naiveKV_duration = 0;
+    uint64_t logKV_fail = 0;
+    uint64_t naiveKV_fail = 0;
+
+    uint64_t start = 0;
+
+    std::vector<std::string> allKeys;
+    val = randomString(500);
+
+    for (int i = 0; i < cmdNum; i++)
+    {
+        if (i % ((int)(0.1 * cmdNum)) == 0)
+        {
+            std::cout << "." << std::flush;
+        }
+
+        key = randomString(100);
+
+        if (rand() % 100 < 50)
+        {
+            // write
+            start = getTS();
+            logKV.put(key, &val);
+            logKV_duration = logKV_duration + getTS() - start;
+
+            start = getTS();
+            naiveKV.put(key, &val);
+            naiveKV_duration = naiveKV_duration + getTS() - start;
+
+            map[key] = val;
+            allKeys.push_back(key);
+        }
+        else
+        {
+            // delete
+
+            start = getTS();
+            logKV.deleteK(key);
+            logKV_duration = logKV_duration + getTS() - start;
+
+            start = getTS();
+            naiveKV.deleteK(key);
+            naiveKV_duration = naiveKV_duration + getTS() - start;
+
+            map.erase(key);
+        }
+    }
+
+    // fail
+    LogKV newLogKV;
+    start = getTS();
+    newLogKV.recover();
+    logKV_fail = logKV_fail + getTS() - start;
+
+    NaiveKV newNaiveKV;
+    start = getTS();
+    newNaiveKV.recover();
+    naiveKV_fail = naiveKV_fail + getTS() - start;
+
+    size_t logKVSize = newLogKV.size();
+    size_t naiveSize = newNaiveKV.size();
+
+    uint64_t logKV_miss = 0;
+    uint64_t naiveKV_miss = 0;
+    for (auto kv : map)
+    {
+        buf_logKV = newLogKV.get(kv.first);
+        buf_naiveKV = newNaiveKV.get(kv.first);
+        if (buf_logKV == nullptr || (*buf_logKV) != kv.second) logKV_miss++;
+        if (buf_naiveKV == nullptr || (*buf_naiveKV) != kv.second)
+            naiveKV_miss++;
+    }
+
+    recExp.cmdNum = cmdNum;
+    recExp.logKV_duration = logKV_duration;
+    recExp.naiveKV_duration = naiveKV_duration;
+    recExp.logKV_fail = logKV_fail;
+    recExp.naiveKV_fail = naiveKV_fail;
+    recExp.logKV_miss = logKV_miss;
+    recExp.naiveKV_miss = naiveKV_miss;
+    recExp.logKVSize = logKVSize;
+    recExp.naiveSize = naiveSize;
+    recExp.naivePersistByte = persistByte;
+    printf("\n");
+
+    return;
+}
+
+void testRec()
+{
+    std::vector<long> cmdNums = {100000, 400000, 700000, 1000000};
+    std::vector<uint> persistByteList = {2 << 15, 2 << 20, 2 << 25};
+    recoveryExp recExp;
+    std::fstream fs;
+    std::string savePath = "./exp/recover/";
+    fs.open(savePath + "recover.txt", std::fstream::out | std::fstream::app);
+
+    for (auto cmd : cmdNums)
+    {
+        for (auto persistByte : persistByteList)
+        {
+            std::cout << "cmdNum " << cmd << " persistByte " << persistByte
+                      << std::endl;
+            for (int i = 0; i < 5; i++)
+            {
+                if (existDir(".persist")) removeDir(".persist");
+
+                std::cout << "iteration " << i << std::endl;
+                recoveryExperiment(cmd, recExp, persistByte);
+                fs << recExp.cmdNum << " " << recExp.naivePersistByte << " "
+                   << recExp.logKV_duration << " " << recExp.naiveKV_duration
+                   << " " << recExp.logKV_fail << " " << recExp.naiveKV_fail
+                   << " " << recExp.logKV_miss << " " << recExp.naiveKV_miss
+                   << " " << recExp.logKVSize << " " << recExp.naiveSize
+                   << std::endl;
+            }
+        }
+    }
+
+    fs.close();
+    removeDir(".persist");
+}
+
 void runTest()
 {
     if (existDir(".persist")) removeDir(".persist");
@@ -371,6 +507,7 @@ static struct option long_options[] = {
     {"help", no_argument, 0, 'h'},
     {"type", required_argument, 0, 't'},
     {"test", optional_argument, 0, 'T'},
+    {"experiment", optional_argument, 0, 'E'},
     {0, 0, 0, 0}  // indicate the end of the array
 };
 
@@ -382,6 +519,7 @@ void print_usage()
     printf("  -t, --type   %s\n",
            "Choose the type of KVStore, possible options: [naive/log]");
     printf("  -T, --test   %s\n", "Run build in test");
+    printf("  -e, --exp   %s\n", "Run experiment");
 }
 
 int main(int argc, char **argv)
@@ -389,8 +527,8 @@ int main(int argc, char **argv)
     int option_index = 0;
     int c;
     KVStore *kv = NULL;
-    while ((c = getopt_long(argc, argv, "ht:T", long_options, &option_index)) !=
-           -1)
+    while ((c = getopt_long(argc, argv, "ht:TE", long_options,
+                            &option_index)) != -1)
     {
         switch (c)
         {
@@ -412,6 +550,9 @@ int main(int argc, char **argv)
             break;
         case 'T':
             runTest();
+            exit(EXIT_SUCCESS);
+        case 'E':
+            testRec();
             exit(EXIT_SUCCESS);
         default:
             print_usage();

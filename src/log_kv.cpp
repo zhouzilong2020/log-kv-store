@@ -102,6 +102,10 @@ void LogKV::recover()
     // read through all files
     for (auto &path : files)
     {
+        if (path.find("naive") != std::string::npos)    // skip the naive kv store
+        {
+            continue;
+        }
         fp.open(path, std::ios::binary | std::ios::in);
         fp.seekg(0, std::ios::beg);
         // read te file meta
