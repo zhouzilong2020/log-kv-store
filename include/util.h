@@ -7,11 +7,26 @@
 #include <dirent.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <sys/types.h>
 #include <unistd.h>
 
 #include <chrono>
 #include <string>
 #include <vector>
+
+struct recoveryExp
+{
+    uint64_t cmdNum;
+    uint naivePersistByte;
+    uint64_t logKV_duration;
+    uint64_t naiveKV_duration;
+    uint64_t logKV_fail;
+    uint64_t naiveKV_fail;
+    uint64_t logKV_miss;
+    uint64_t naiveKV_miss;
+    uint64_t logKVSize;
+    uint64_t naiveSize;
+};
 
 uint64_t getTS();
 
