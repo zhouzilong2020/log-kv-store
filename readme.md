@@ -1,5 +1,12 @@
 # Log Key-Value Store
 
+## Road Map
+- [x] :bangbang: Basic Data structure 
+- [x] :bangbang: Comparison between std::unordered_map and ours
+- [x] :bangbang: Persist method
+- [ ] :heavy_exclamation_mark: Snapshot for fast recovery
+- [ ] :interrobang: Point in Time Recovery
+
 ## Overview
 In this project, we want to compare the advantage of log-based key-value store over the naive key-value store.
 
@@ -34,11 +41,20 @@ Each entry will only be appended to the log, which may promise good performance 
 - Delete(k)
 
 ## Data Model
-<img src="fig/data-model.jpeg">
+In our LogKV, the in memory hash table stores the key and a pointer pointing to the corresponding entry in the chunk. The chunk is the basic memory management and persistent unit. We append a chunk into the file once it is full and allocate a new chunk for further logging.
 
-## Road Map
-- [ ] :bangbang: Basic Data structure 
-- [ ] :bangbang: Comparison between std::unordered_map and ours
-- [ ] :bangbang: Persist method
-- [ ] :heavy_exclamation_mark: Snapshot for fast recovery
-- [ ] :interrobang: Point in Time Recovery
+<img src="fig/log-structure.png">
+<img src="fig/data-modelv2.png">
+
+## How to start?
+```bash
+git clone git@github.com:zhouzilong2020/log-kv-store.git
+# cd to the root dir of the project
+make               # compile 
+chmod +x ./log-kv  # grant execution to the executable
+./log-kv -t log    # start the service in log mode
+```
+```bash
+scripts/test c     # start the cartesian testing described in our report
+scripts/test e     # start the example testing described in our report
+```
