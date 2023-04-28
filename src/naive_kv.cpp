@@ -13,7 +13,7 @@ void NaiveKV::put(const std::string& key, const std::string* val)
 {
     kvTable[key] = *val;
     byteSize += key.size() + val->size();
-    if (byteSize > (2 << 20))
+    if (byteSize > persistByte)
     {
         persist();
         byteSize = 0;
@@ -36,7 +36,7 @@ void NaiveKV::deleteK(const std::string& key)
 {
     kvTable.erase(key);
     byteSize += key.size();
-    if (byteSize > (2 << 20))
+    if (byteSize > persistByte)
     {
         persist();
         byteSize = 0;

@@ -479,26 +479,26 @@ void runTest()
 {
     if (existDir(".persist")) removeDir(".persist");
 
-    // testBasicGetPut();
-    // removeDir(".persist");
+    testBasicGetPut();
+    removeDir(".persist");
 
-    // testBasicDelete();
-    // removeDir(".persist");
+    testBasicDelete();
+    removeDir(".persist");
 
-    // testAdvanced();
-    // removeDir(".persist");
+    testAdvanced();
+    removeDir(".persist");
 
-    // testBigKV();
-    // removeDir(".persist");
+    testBigKV();
+    removeDir(".persist");
 
-    // testRecoverDbg();
-    // removeDir(".persist");
+    testRecoverDbg();
+    removeDir(".persist");
 
-    // testRecoverBig();
-    // removeDir(".persist");
+    testRecoverBig();
+    removeDir(".persist");
 
-    // testPersist();
-    // removeDir(".persist");
+    testPersist();
+    removeDir(".persist");
 
     printf("ALL TEST PASSED\n");
 }
