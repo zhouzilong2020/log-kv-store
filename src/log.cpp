@@ -57,9 +57,6 @@ Log::~Log()
     {
         if (chunk) delete chunk;
     }
-    std::cout << "log" << std::endl;
-    std::cout << "Persist time: " << persistTime << std::endl;
-    std::cout << "Persist duration: " << persistDuration << "ms" << std::endl;
 }
 
 Entry *Log::append(const int version, const std::string &key,
