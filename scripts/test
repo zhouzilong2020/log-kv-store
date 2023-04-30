@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 
+import itertools
 import argparse
 import subprocess
 import random
-from typing import IO
 import psutil
 import time
 import string
@@ -27,34 +27,37 @@ def run_experiment(kv_type: str, cmd_list: list, p):
     if os.path.exists(dir_path):
         shutil.rmtree(dir_path)
     os.mkdir(dir_path)
-    process = subprocess.Popen(
+    proc = subprocess.Popen(
         ["./log_kv", "-t", kv_type],
         stdin=subprocess.PIPE,
-        stdout=subprocess.DEVNULL)  # dump the output to /dev/null
+        stdout=subprocess.PIPE
+    )
 
-    if process.poll() is not None:
+    if proc.poll() is not None:
         raise RuntimeError("log_kv process has terminated unexpectedly")
     task = p.add_task("running exp", total=len(cmd_list))
-    # Measure the time taken to insert the key-value pairs
     start_time = time.time()
-    # Input all key-value pairs into the log_kv process
     for cmd in cmd_list:
-        cmd_str = " ".join(cmd)
-        process.stdin.write(cmd_str.encode())
-        process.stdin.flush()
+        cmd_str = " ".join(cmd)+"\n"
+        proc.stdin.write(cmd_str.encode())
+        proc.stdin.flush()
+        proc.stdout.readline()  # we don't care about the output
         p.update(task_id=task, advance=1)
-    # Close the input stream to the log_kv process
-    process.stdin.close()
-    mem_used = psutil.Process(process.pid).memory_info().rss
-    process.wait()
+    mem_used = psutil.Process(proc.pid).memory_info().rss
+    proc.stdin.write("quit\n".encode())
+    proc.stdin.flush()
     end_time = time.time()
     elapsed_time = end_time - start_time
     p.remove_task(task_id=task)
+
+    # [throughput, elapsed_time, mem_used]
     return [len(cmd_list)/elapsed_time, elapsed_time, mem_used]
 
 
 value = generate_random_string(500)
-def prepare_cmd(cmd_num: int, hot_key: float, hot_rate: float, hit_rate: float, read_fraction: float,p):
+
+
+def prepare_cmd(cmd_num: int, hot_key: float, hot_rate: float, hit_rate: float, read_fraction: float, p):
     def put():
         key = generate_random_string(100)
         if random.randint(0, 1000) < hot_key*1000:
@@ -110,43 +113,30 @@ def prepare_cmd(cmd_num: int, hot_key: float, hot_rate: float, hit_rate: float, 
     return cmd_list, (len(key_list)+len(hot_list))*602
 
 
-def cartesian_argument_generator():
-    '''calculate cmd on the fly'''
-    for cmd_num in [100000,200000,400000,600000]:
-        for hot_key_fraction in hot_key_fractions:
-            for hot_rate in hot_rates:
-                for hit_rate in hit_rates:
-                    for read_fraction in read_fractions:
-                        yield [
-                            cmd_num,
-                            hot_key_fraction,
-                            hot_rate,
-                            hit_rate,
-                            read_fraction
-                        ]
+def cartesian_arguments():
+    cmd_range = [100000, 200000, 400000, 600000]
+    hot_key_fractions = [0.05, 0.1, 0.2]
+    hot_rates = [0.05, 0.7, 0.8, 0.9]
+    hit_rates = [0.1, 0.2, 0.6, 0.8, 0.99]
+    read_fractions = [0.2, 0.4, 0.6, 0.8]
+    argument_sets = list(itertools.product(
+        cmd_range, hot_key_fractions, hot_rates, hit_rates, read_fractions
+    ))
+    for args in argument_sets:
+        if args[1] > args[2]:  # invalid argument, can not have the hot rate smaller than the hot key fraction
+            continue
+        yield args
 
 
-iteration = 5
-cmd_num = 500000
-hot_key_fractions = [0.01, 0.05, 0.1, 0.2]
-hot_rates = [0.01, 0.7, 0.8, 0.9]
-hit_rates = [0.1,0.2, 0.6, 0.8, 0.99]
-read_fractions = [0.1,0.2, 0.4, 0.6, 0.8, 0.99]
-resPath = "./exp"
-if not os.path.exists(resPath):
-    os.mkdir(resPath)
-
-
-def example_argument_generator():
+def example_arguments():
     cmd_num = 1000000
-    cmd_dict = {
-        "haha": [cmd_num, 0.01, 0.50, 1, 0.01],
-        "write_intensive_no_hotkey":   [cmd_num, 0, 0, 0.95, 0.05],
-        "write_intensive_hotkey": [cmd_num, 0.2, 0.6, 0.95, 0.05],
-        "read_intensive_no_hotkey":   [cmd_num, 0, 0, 0.95, 0.8],
-        "read_intensive_hotkey": [cmd_num, 0.2, 0.6, 0.95, 0.8],
-    }
-    for _, args in cmd_dict.items():
+    argument_list = [
+        [cmd_num, 0, 0, 0.95, 0.05],      # write_intensive_no_hotkey
+        [cmd_num, 0.2, 0.6, 0.95, 0.05],  # write_intensive_hotkey
+        [cmd_num, 0, 0, 0.95, 0.8],       # read_intensive_no_hotkey
+        [cmd_num, 0.2, 0.6, 0.95, 0.8],   # read_intensive_hotkey
+    ]
+    for args in argument_list:
         yield args
 
 
@@ -155,6 +145,9 @@ parser.add_argument("experiment_type",
                     help="experiment type, c for cartesian, e for example")
 experiment_type = parser.parse_args().experiment_type
 
+resPath = "./exp"
+if not os.path.exists(resPath):
+    os.mkdir(resPath)
 # Create a progress bar for the total progress
 with Progress(
     "[progress.description]{task.description}",
@@ -164,14 +157,15 @@ with Progress(
     TimeRemainingColumn(),
 ) as p:
     total = 0
+    iteration = 5
+
     argument_generator = None
     if experiment_type == "c":
-        total = iteration*len(kv_types)*len(hot_key_fractions) * \
-            len(hot_rates)*len(hit_rates)*len(read_fractions)
-        argument_generator = cartesian_argument_generator
+        total = iteration*2*4*3*4*5*4
+        argument_generator = cartesian_arguments
     elif experiment_type == "e":
-        total = 4*iteration
-        argument_generator = example_argument_generator
+        total = iteration*2*4
+        argument_generator = example_arguments
     else:
         print("Invalid input")
         exit(1)
@@ -194,5 +188,7 @@ with Progress(
                 results.append(result)
                 p.update(task_id=task, advance=1, refresh=True)
             result_list.append(results)
+            break
         np.save(
-            f"{resPath}/{args[0]}-{args[1]:.2f}-{args[2]:.2f}-{args[3]:.2f}-{args[4]:.2f}-{mem_expected}.npy", np.array(result_list))
+            f"{resPath}/{args[0]}-{args[1]:.2f}-{args[2]:.2f}-{args[3]:.2f}-{args[4]:.2f}-{mem_expected}", np.array(result_list))
+        break
