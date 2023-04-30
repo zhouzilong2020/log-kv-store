@@ -435,6 +435,7 @@ void recoveryExperiment(long cmdNum, recoveryExp &recExp, uint persistByte)
     recExp.logKVSize = logKVSize;
     recExp.naiveSize = naiveSize;
     recExp.naivePersistByte = persistByte;
+    recExp.gtSize = map.size();
     printf("\n");
 
     return;
@@ -465,8 +466,8 @@ void testRec()
                    << recExp.logKV_duration << " " << recExp.naiveKV_duration
                    << " " << recExp.logKV_fail << " " << recExp.naiveKV_fail
                    << " " << recExp.logKV_miss << " " << recExp.naiveKV_miss
-                   << " " << recExp.logKVSize << " " << recExp.naiveSize
-                   << std::endl;
+                   << " " << recExp.logKVSize << " " << recExp.naiveSize << " "
+                   << recExp.gtSize << std::endl;
             }
         }
     }
@@ -527,6 +528,9 @@ int main(int argc, char **argv)
     int option_index = 0;
     int c;
     KVStore *kv = NULL;
+
+    srand(12345);
+
     while ((c = getopt_long(argc, argv, "ht:TE", long_options,
                             &option_index)) != -1)
     {

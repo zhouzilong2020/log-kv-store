@@ -26,6 +26,7 @@ struct recoveryExp
     uint64_t naiveKV_miss;
     uint64_t logKVSize;
     uint64_t naiveSize;
+    uint64_t gtSize;
 };
 
 uint64_t getTS();
