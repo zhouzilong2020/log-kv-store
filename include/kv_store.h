@@ -34,18 +34,30 @@ class KVStore
             {
                 if (args.size() != 3) continue;
                 put(args[1], &args[2]);
+                fprintf(stdout, "%s\n", args[1].c_str());
+                fflush(stdout);
             }
             else if (args[0] == CMD_GET)
             {
                 if (args.size() != 2) continue;
                 auto res = this->get(args[1]);
                 // if the key exists, print the value
-                if (res) std::cout << *res << std::endl;
+                if (res)
+                    fprintf(stdout, "%s\n", res->c_str());
+                else
+                    fprintf(stdout, "NULL\n");
+                fflush(stdout);
             }
             else if (args[0] == CMD_DELETE)
             {
                 if (args.size() != 2) continue;
                 deleteK(args[1]);
+                fprintf(stdout, "%s\n", args[1].c_str());
+                fflush(stdout);
+            }
+            else if (args[0] == "CMD_QUIT")
+            {
+                break;
             }
             else if (args[0] == CMD_STATISTIC)
             {
@@ -96,6 +108,7 @@ class KVStore
     const std::string CMD_GET = "get";
     const std::string CMD_DELETE = "delete";
     const std::string CMD_STATISTIC = "statistic";
+    const std::string CMD_QUIT = "quit";
 
     std::vector<std::string> split(const std::string &str, char delimiter)
     {
