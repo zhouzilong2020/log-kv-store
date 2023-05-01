@@ -179,15 +179,16 @@ with Progress(
 
     task = p.add_task("Total progress", total=total)
     for args in argument_generator():
-        cmd, mem_expected = prepare_cmd(*args[:5], p)
-        result_list = []
         p.log(
+            "preparing data for:"
             f"cmd_cnt {args[0]}\t"
             f"hot_key {args[1]}\t"
             f"hot_rate {args[2]}\t"
             f"hit_rate {args[3]}\t"
             f"read_fraction {args[4]}"
         )
+        cmd, mem_expected = prepare_cmd(*args[:5], p)
+        result_list = []
         for kv_type in kv_types:
             p.log(f"running {kv_type}")
             results = []
