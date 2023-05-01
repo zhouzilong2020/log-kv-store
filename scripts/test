@@ -149,6 +149,10 @@ def example_arguments():
         yield args
 
 
+def args_to_str(args):
+    return f"{args[1]:.2f}-{args[2]:.2f}-{args[3]:.2f}-{args[4]:.2f}"
+
+
 parser = argparse.ArgumentParser(description="run experiment")
 parser.add_argument("experiment_type",
                     help="experiment type, c for cartesian, e for example")
@@ -157,6 +161,11 @@ experiment_type = parser.parse_args().experiment_type
 resPath = "./exp"
 if not os.path.exists(resPath):
     os.mkdir(resPath)
+finished_exp = set()
+for file in os.listdir(resPath):
+    config_hash = "-".join(file.split("-")[:-1])
+    finished_exp.add(config_hash)
+
 # Create a progress bar for the total progress
 with Progress(
     "[progress.description]{task.description}",
@@ -180,6 +189,18 @@ with Progress(
 
     task = p.add_task("Total progress", total=total)
     for args in argument_generator():
+        args_hash = args_to_str(args)
+        if args_hash in finished_exp:
+            p.log(
+                "found existing result for"
+                f"cmd_cnt {args[0]}\t"
+                f"hot_key {args[1]}\t"
+                f"hot_rate {args[2]}\t"
+                f"hit_rate {args[3]}\t"
+                f"read_fraction {args[4]}\n"
+                "skipping..."
+            )
+            continue
         p.log(
             "preparing data for:"
             f"cmd_cnt {args[0]}\t"
