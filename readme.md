@@ -58,3 +58,6 @@ chmod +x ./log-kv  # grant execution to the executable
 scripts/test c     # start the cartesian testing described in our report
 scripts/test e     # start the example testing described in our report
 ```
+```bash
+scripts/fig        # draw the figures shown in our report
+```
