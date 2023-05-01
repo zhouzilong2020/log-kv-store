@@ -181,19 +181,22 @@ with Progress(
     for args in argument_generator():
         cmd, mem_expected = prepare_cmd(*args[:5], p)
         result_list = []
+        p.log(
+            f"cmd_cnt {args[0]}\t"
+            f"hot_key {args[1]}\t"
+            f"hot_rate {args[2]}\t"
+            f"hit_rate {args[3]}\t"
+            f"read_fraction {args[4]}"
+        )
         for kv_type in kv_types:
-            p.log(
-                f"running {kv_type}\t"
-                f"hot_key: {args[1]}\t"
-                f"hot_rate: {args[2]}\t"
-                f"hit_rate: {args[3]}\t"
-                f"read_fraction: {args[4]}"
-            )
+            p.log(f"running {kv_type}")
             results = []
             for i in range(iteration):
                 result = run_experiment(kv_type, cmd, p)
                 results.append(result)
                 p.update(task_id=task, advance=1, refresh=True)
+            p.log(f"finished {kv_type}")
             result_list.append(results)
+        p.log("dumped result")
         np.save(
             f"{resPath}/{args[1]:.2f}-{args[2]:.2f}-{args[3]:.2f}-{args[4]:.2f}-{mem_expected}", np.array(result_list))
