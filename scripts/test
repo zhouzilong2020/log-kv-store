@@ -36,22 +36,30 @@ def run_experiment(kv_type: str, cmd_list: list, p):
     if proc.poll() is not None:
         raise RuntimeError("log_kv process has terminated unexpectedly")
     task = p.add_task("running exp", total=len(cmd_list))
+    result = []
+
     start_time = time.time()
-    for cmd in cmd_list:
+    for i, cmd in enumerate(cmd_list):
         cmd_str = " ".join(cmd)+"\n"
         proc.stdin.write(cmd_str.encode())
         proc.stdin.flush()
         proc.stdout.readline()  # we don't care about the output
         p.update(task_id=task, advance=1)
+
+        if (i+1) % 50000 == 0:
+            elapsed_time = time.time() - start_time
+            mem_used = psutil.Process(proc.pid).memory_info().rss
+            result.append([i+1, i/elapsed_time, elapsed_time, mem_used])
+
     mem_used = psutil.Process(proc.pid).memory_info().rss
     proc.stdin.write("quit\n".encode())
     proc.stdin.flush()
-    end_time = time.time()
-    elapsed_time = end_time - start_time
+    elapsed_time = time.time() - start_time
     p.remove_task(task_id=task)
-
-    # [throughput, elapsed_time, mem_used]
-    return [len(cmd_list)/elapsed_time, elapsed_time, mem_used]
+    # [cmd_cnt, throughput, elapsed_time, mem_used]
+    result.append([len(cmd_list), len(cmd_list) /
+                  elapsed_time, elapsed_time, mem_used])
+    return result
 
 
 value = generate_random_string(500)
@@ -114,7 +122,7 @@ def prepare_cmd(cmd_num: int, hot_key: float, hot_rate: float, hit_rate: float, 
 
 
 def cartesian_arguments():
-    cmd_range = [100000, 200000, 400000, 600000]
+    cmd_range = [500000]
     hot_key_fractions = [0.05, 0.1, 0.2]
     hot_rates = [0.05, 0.7, 0.8, 0.9]
     hit_rates = [0.1, 0.2, 0.6, 0.8, 0.99]
@@ -157,11 +165,10 @@ with Progress(
     TimeRemainingColumn(),
 ) as p:
     total = 0
-    iteration = 5
-
+    iteration = 1
     argument_generator = None
     if experiment_type == "c":
-        total = iteration*2*4*3*4*5*4
+        total = iteration*2*3*4*5*4
         argument_generator = cartesian_arguments
     elif experiment_type == "e":
         total = iteration*2*4
@@ -188,7 +195,5 @@ with Progress(
                 results.append(result)
                 p.update(task_id=task, advance=1, refresh=True)
             result_list.append(results)
-            break
         np.save(
-            f"{resPath}/{args[0]}-{args[1]:.2f}-{args[2]:.2f}-{args[3]:.2f}-{args[4]:.2f}-{mem_expected}", np.array(result_list))
-        break
+            f"{resPath}/{args[1]:.2f}-{args[2]:.2f}-{args[3]:.2f}-{args[4]:.2f}-{mem_expected}", np.array(result_list))
