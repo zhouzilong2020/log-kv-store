@@ -55,7 +55,7 @@ class KVStore
                 fprintf(stdout, "%s\n", args[1].c_str());
                 fflush(stdout);
             }
-            else if (args[0] == "CMD_QUIT")
+            else if (args[0] == CMD_QUIT)
             {
                 break;
             }
