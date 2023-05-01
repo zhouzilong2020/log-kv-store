@@ -4,3 +4,4 @@ log_kv
 .persist/
 .DS_Store
 exp
+exp_fig
