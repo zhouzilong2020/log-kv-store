@@ -200,6 +200,8 @@ with Progress(
                 f"read_fraction {args[4]}\n"
                 "skipping..."
             )
+            p.update(task_id=task, advance=len(
+                kv_types)*iteration, refresh=True)
             continue
         p.log(
             "preparing data for:"
