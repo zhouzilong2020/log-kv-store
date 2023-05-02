@@ -1,0 +1,145 @@
+#!/usr/local/Caskroom/miniconda/base/bin/python3
+import numpy as np
+import os
+import collections
+import matplotlib.pyplot as plt
+
+input_dir = "exp"
+output_dir = "exp_fig"
+
+
+def config_hash(file: str):
+    configs = file.split("-")[:-1]
+    return "-".join(configs)
+
+
+def expected_mem(file: str):
+    file = file.removesuffix(".npy")
+    return file.split("-")[-1]
+
+
+results = collections.defaultdict(lambda: {"LogKV": [], "NaiveKV": []})
+expected_mems = collections.defaultdict()
+
+for file in os.listdir(input_dir):
+    hash = config_hash(file)
+    expected_mems[hash] = expected_mem(file)
+    data = np.load(os.path.join(input_dir, file))
+    results[hash]["LogKV"] = data[0][0]
+    results[hash]["NaiveKV"] = data[1][0]
+
+
+def hotkey_throughput():
+    fig_x = 3
+    fig_y = 3
+    fig, axs = plt.subplots(fig_x, fig_y, figsize=(
+        15, 15), sharex=True, sharey=True)
+    fig_cnt = 0
+    for hash in sorted(results):
+        # read heavy
+        if hash.split("-")[2] != "0.80" or hash.split("-")[3] != "0.80" or hash.split("-")[1] == "0.05":
+            continue
+
+        result = results[hash]
+        _axs = axs[fig_cnt // fig_y][fig_cnt % fig_y]
+
+        def hash_to_title(hash: str):
+            config_names = ["hotkey fraction", "hot rate"]
+            configs = hash.split("-")[:2]
+            tmp = []
+            for name, num in zip(config_names, configs):
+                tmp.append(f"{name}_{num}")
+            return "-".join(tmp)
+
+        _axs.set_title(hash_to_title(hash))
+
+        def to_mb(mem):
+            return int(mem)/pow(2, 20)
+
+        def draw(type: str, _axs2):
+            X = [x[0] for x in result[type]]
+            throughput = [x[1]/1000 for x in result[type]]
+            mem_usage = [to_mb(x[3]) for x in result[type]]
+            _axs.plot(X, throughput, label=f"Throughput-{type}")
+            _axs2.plot(X, mem_usage, linestyle="-.", label=f"Mem Usage-{type}")
+        _axs2 = _axs.twinx()
+        draw("LogKV", _axs2)
+        draw("NaiveKV", _axs2)
+
+        if fig_cnt == 0:
+            lines1, labels1 = _axs.get_legend_handles_labels()
+            lines2, labels2 = _axs2.get_legend_handles_labels()
+            lines = lines1 + lines2
+            labels = labels1 + labels2
+            fig.legend(lines, labels, loc='upper center',
+                       bbox_to_anchor=(0.5, 0.05), ncol=4,
+                       fontsize="xx-large")
+
+        fig_cnt += 1
+    fig.text(0.5, 0.07, 'Number of Command',
+             ha='center', fontsize=16, fontweight=20)
+    fig.text(0.07, 0.5, 'K Commands per Second',
+             va='center', rotation='vertical', fontsize=16, fontweight=20)
+    fig.text(0.93, 0.5, 'Memory Usage (MB)',
+             va='center', rotation='vertical', fontsize=16, fontweight=20)
+
+    plt.savefig(os.path.join(output_dir, "hotkey.png"), dpi=300)
+
+
+def no_hotkey_throughput():
+    fig_x = 5
+    fig_y = 4
+    fig, axs = plt.subplots(fig_x, fig_y, figsize=(
+        20, 25), sharex=True, sharey=True)
+    fig_cnt = 0
+    for hash in sorted(results):
+        # read heavy
+        if hash.split("-")[0] != "0.05" or hash.split("-")[1] != "0.05":
+            continue
+
+        result = results[hash]
+        _axs = axs[fig_cnt // fig_y][fig_cnt % fig_y]
+
+        def hash_to_title(hash: str):
+            config_names = ["hit rate", "read fraction"]
+            configs = hash.split("-")[2:]
+            tmp = []
+            for name, num in zip(config_names, configs):
+                tmp.append(f"{name}_{num}")
+            return "-".join(tmp)
+        _axs.set_title(hash_to_title(hash))
+
+        def to_mb(mem):
+            return int(mem)/pow(2, 20)
+
+        def draw(type: str, _axs2):
+            X = [x[0] for x in result[type]]
+            throughput = [x[1]/1000 for x in result[type]]
+            mem_usage = [to_mb(x[3]) for x in result[type]]
+            _axs.plot(X, throughput, label=f"Throughput-{type}")
+            _axs2.plot(X, mem_usage, linestyle="-.", label=f"Mem Usage-{type}")
+        _axs2 = _axs.twinx()
+        draw("LogKV", _axs2)
+        draw("NaiveKV", _axs2)
+
+        if fig_cnt == 0:
+            lines1, labels1 = _axs.get_legend_handles_labels()
+            lines2, labels2 = _axs2.get_legend_handles_labels()
+            lines = lines1 + lines2
+            labels = labels1 + labels2
+            fig.legend(lines, labels, loc='upper center',
+                       bbox_to_anchor=(0.5, 0.05), ncol=4,
+                       fontsize="xx-large")
+        fig_cnt += 1
+    fig.text(0.5, 0.07, 'Number of Command',
+             ha='center', fontsize=16, fontweight=20)
+    fig.text(0.07, 0.5, 'K Commands per Second',
+             va='center', rotation='vertical', fontsize=16, fontweight=20)
+    fig.text(0.93, 0.5, 'Memory Usage (MB)',
+             va='center', rotation='vertical', fontsize=16, fontweight=20)
+
+    plt.savefig(os.path.join(output_dir, "no-hotkey.png"), dpi=300)
+
+
+hotkey_throughput()
+no_hotkey_throughput()

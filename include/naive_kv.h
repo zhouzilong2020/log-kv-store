@@ -14,11 +14,7 @@ class NaiveKV : public KVStore
 {
    public:
     // do nothing
-    ~NaiveKV()
-    {
-        std::cout << "naive" << std::endl;
-        statistic();
-    };
+    ~NaiveKV() { statistic(); };
     virtual void put(const std::string &key, const std::string *val) override;
     virtual std::unique_ptr<std::string> get(const std::string &key) override;
     virtual void deleteK(const std::string &key) override;

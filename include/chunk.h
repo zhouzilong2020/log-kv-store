@@ -85,9 +85,9 @@ class Chunk
         newEntry->version = version;
         newEntry->keySize = keySize;
         newEntry->valSize = valSize;
-        strncpy((char *)&newEntry->payload, key.c_str(), newEntry->keySize);
+        strncpy((char *)newEntry + offset, key.c_str(), newEntry->keySize);
         if (val)
-            strncpy((char *)&newEntry->payload + keySize, val->c_str(),
+            strncpy((char *)newEntry + offset + keySize, val->c_str(),
                     newEntry->valSize);
 
         updatedTs = getTS();
